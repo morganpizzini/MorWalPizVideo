@@ -27,6 +27,7 @@ describe("Workshop route configuration", () => {
       "production",
       "sessions/shooting",
       "history",
+      "inventory",
       "integrity",
       "account/profile",
       "*",
@@ -42,6 +43,9 @@ describe("Workshop route configuration", () => {
     expect(productionRoute?.element).toBeTruthy();
     expect(productionRoute?.loader).toBeUndefined();
     expect(productionRoute?.action).toBeUndefined();
+    const inventoryRoute = shellRoute?.children?.find((route) => route.path === "inventory");
+    expect(inventoryRoute?.loader).toBeTypeOf("function");
+    expect(inventoryRoute?.action).toBeTypeOf("function");
     for (const path of ["firearms", "sessions/shooting", "history", "integrity"]) {
       const route = shellRoute?.children?.find((candidate) => candidate.path === path);
       expect(route?.loader, `${path} loader`).toBeTypeOf("function");

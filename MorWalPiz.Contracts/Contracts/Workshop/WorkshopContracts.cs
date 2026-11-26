@@ -158,9 +158,10 @@ public class WorkshopRecipeRequest
     [StringLength(80)] public string? Oal { get; init; }
     public decimal? BulletWeight { get; init; }
     [StringLength(160)] public string? BulletForm { get; init; }
-    [StringLength(160)] public string? Drawing { get; init; }
     [StringLength(160)] public string? Primer { get; init; }
     [StringLength(160)] public string? Powder { get; init; }
+    [StringLength(80)] public string? PrimerProductId { get; init; }
+    [StringLength(80)] public string? PowderProductId { get; init; }
     public decimal? PowderWeight { get; init; }
     [StringLength(4000)] public string? Notes { get; init; }
 }
@@ -177,14 +178,113 @@ public sealed class ArchiveWorkshopRecipeRequest
     [Required, StringLength(80)] public string IdempotencyKey { get; init; } = string.Empty;
 }
 
-public sealed class RecordWorkshopProductionRequest
+public class RecordWorkshopProductionRequest
 {
     [Required] public string RecipeId { get; init; } = string.Empty;
+    [Range(1, long.MaxValue)] public long RecipeVersion { get; init; }
     public DateTime ProductionDate { get; init; }
     [Range(1, long.MaxValue)] public long QuantityProduced { get; init; }
+    [Required, StringLength(80)] public string BulletProductId { get; init; } = string.Empty;
+    public IReadOnlyList<WorkshopLotAllocationRequest> PrimerLotAllocations { get; init; } = [];
+    public IReadOnlyList<WorkshopLotAllocationRequest> BulletLotAllocations { get; init; } = [];
     [StringLength(4000)] public string? Notes { get; init; }
     [Required, StringLength(80)] public string IdempotencyKey { get; init; } = string.Empty;
 }
+
+public sealed class UpdateWorkshopProductionRequest : RecordWorkshopProductionRequest
+{
+    [Range(0, long.MaxValue)] public long ExpectedRevision { get; init; }
+}
+
+public sealed class WorkshopLotAllocationRequest
+{
+    [Required, StringLength(80)] public string LotId { get; init; } = string.Empty;
+    [Range(1, long.MaxValue)] public long Quantity { get; init; }
+}
+
+public sealed class CreateWorkshopSupplyProductRequest
+{
+    [Required, StringLength(40)] public string Type { get; init; } = string.Empty;
+    [StringLength(120)] public string? Brand { get; init; }
+    [Required, StringLength(160)] public string Name { get; init; } = string.Empty;
+    [Required, StringLength(80)] public string IdempotencyKey { get; init; } = string.Empty;
+}
+
+public sealed class RecordWorkshopSupplyPurchaseRequest
+{
+    [Required, StringLength(80)] public string ProductId { get; init; } = string.Empty;
+    public DateTime PurchaseDate { get; init; }
+    [Range(1, 10000)] public long Quantity { get; init; }
+    [Range(typeof(decimal), "0", "999999999999.99")] public decimal TotalPrice { get; init; }
+    [Required, RegularExpression("^[A-Z]{3}$")] public string Currency { get; init; } = string.Empty;
+    [Required, StringLength(80)] public string IdempotencyKey { get; init; } = string.Empty;
+}
+
+public sealed class AdjustWorkshopSupplyStockRequest
+{
+    [Required, StringLength(80)] public string LotId { get; init; } = string.Empty;
+    [Range(0, long.MaxValue)] public long PhysicalCount { get; init; }
+    [Range(0, long.MaxValue)] public long ExpectedRevision { get; init; }
+    [Required, StringLength(500)] public string Reason { get; init; } = string.Empty;
+    [Required, StringLength(80)] public string IdempotencyKey { get; init; } = string.Empty;
+}
+
+public sealed class SetWorkshopSupplyLotStatusRequest
+{
+    public bool IsEmpty { get; init; }
+    [Range(0, long.MaxValue)] public long ExpectedRevision { get; init; }
+    [Required, StringLength(80)] public string IdempotencyKey { get; init; } = string.Empty;
+}
+
+public sealed class RecordWorkshopComponentPurchaseRequest
+{
+    public DateTime PurchaseDate { get; init; }
+    [Range(typeof(decimal), "0", "999999999999.99")] public decimal TotalPrice { get; init; }
+    [Required, RegularExpression("^[A-Z]{3}$")] public string Currency { get; init; } = string.Empty;
+    [Required, StringLength(80)] public string IdempotencyKey { get; init; } = string.Empty;
+}
+
+public sealed class CorrectWorkshopComponentPurchaseRequest
+{
+    public DateTime PurchaseDate { get; init; }
+    [Range(typeof(decimal), "0", "999999999999.99")] public decimal TotalPrice { get; init; }
+    [Required, RegularExpression("^[A-Z]{3}$")] public string Currency { get; init; } = string.Empty;
+    [Range(1, long.MaxValue)] public long ExpectedRevision { get; init; }
+    [Required, StringLength(500)] public string Reason { get; init; } = string.Empty;
+    [Required, StringLength(80)] public string IdempotencyKey { get; init; } = string.Empty;
+}
+
+public sealed record WorkshopInventoryProductContract(
+    string Id, string Type, string? Brand, string Name, bool Archived);
+
+public sealed record WorkshopInventoryLotContract(
+    string Id, string ProductId, DateTime PurchaseDate, long PurchasedQuantity,
+    long AvailableQuantity, decimal TotalPrice, string Currency, bool IsEmpty, long? ItemCount, long Revision);
+
+public sealed record WorkshopComponentPurchaseContract(
+    string Id, string ComponentId, DateTime PurchaseDate, decimal TotalPrice, string Currency, long Revision,
+    IReadOnlyList<WorkshopComponentPurchaseRevision> History);
+
+public sealed record WorkshopCurrencyTotalContract(string Currency, decimal Total);
+
+public sealed record WorkshopInventoryContract(
+    IReadOnlyList<WorkshopInventoryProductContract> Products,
+    IReadOnlyList<WorkshopInventoryLotContract> Lots,
+    IReadOnlyList<WorkshopComponentPurchaseContract> ComponentPurchases,
+    IReadOnlyList<WorkshopCurrencyTotalContract> Spending,
+    IReadOnlyList<WorkshopCurrencyTotalContract> PartialConsumptionCosts,
+    IReadOnlyList<string> MissingComponentPrices);
+
+public sealed record WorkshopOperationMutationContract(
+    string Id, WorkshopOperationType OperationType, DateTime EffectiveAt, DateTime RecordedAt,
+    string ContributionDigest, bool Idempotent, ProductionSession Session, AmmoBatch Batch);
+
+public sealed record WorkshopProductionCorrectionContract(
+    string OperationId, DateTime RecordedAt, WorkshopProductionCorrectionFact Correction);
+
+public sealed record WorkshopProductionRecordContract(
+    ProductionSession Session, IReadOnlyList<WorkshopProductionCorrectionContract> Corrections,
+    bool ProjectionPending);
 
 public sealed class AllocateWorkshopAmmoRequest
 {

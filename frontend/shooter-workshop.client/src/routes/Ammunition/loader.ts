@@ -1,4 +1,10 @@
-import { getWorkshopBatches, getWorkshopRecipes } from "@morwalpizvideo/services";
+import {
+  getWorkshopBatches,
+  getWorkshopProductionRecords,
+  getWorkshopRecipes,
+} from "@morwalpizvideo/services";
+import { loadOnlineInventory } from "../onlineInventory";
+import type { OnlineInventoryAvailability } from "../onlineInventory";
 import type { ShouldRevalidateFunctionArgs } from "react-router";
 
 export interface AmmunitionLoaderData {
@@ -9,19 +15,26 @@ export interface AmmunitionLoaderData {
 export interface AmmunitionLoaderResources {
   recipes: ReturnType<typeof getWorkshopRecipes>;
   batches: ReturnType<typeof getWorkshopBatches>;
+  inventory: Promise<OnlineInventoryAvailability>;
+  productionRecords: ReturnType<typeof getWorkshopProductionRecords>;
   productionPanel: Promise<[
     Awaited<ReturnType<typeof getWorkshopRecipes>>,
     Awaited<ReturnType<typeof getWorkshopBatches>>,
+    Awaited<ReturnType<typeof getWorkshopProductionRecords>>,
   ]>;
 }
 
 export function loader() {
   const recipes = getWorkshopRecipes();
   const batches = getWorkshopBatches();
+  const inventory = loadOnlineInventory();
+  const productionRecords = getWorkshopProductionRecords();
   return {
     recipes,
     batches,
-    productionPanel: Promise.all([recipes, batches]),
+    inventory,
+    productionRecords,
+    productionPanel: Promise.all([recipes, batches, productionRecords]),
   } satisfies AmmunitionLoaderResources;
 }
 

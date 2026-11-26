@@ -1,14 +1,18 @@
 # Mongo Index Audit Artifacts (Phase 4)
 
 This is the canonical operator guide for the source-owned Mongo index operation,
-aligned with ADR-008 and the limited startup exception in ADR-022. The runtime
+aligned with ADR-008's retained data-safety rules and the non-blocking startup
+policy in ADR-029. The runtime
 `MongoIndexOperationsService.Manifest` and the operational manifest are the source
 of truth. This guide intentionally does not create a separate index inventory.
 
-The blog-interaction indexes are verified/created by ServerAPI and BackOffice at
-startup in Mongo mode; their three collections are created empty when missing.
-Startup does not apply any other manifest keys and never removes or repairs a
-conflicting index. All other indexes continue through the reviewed procedures below.
+BackOffice attempts every executable manifest index at startup in Mongo mode,
+sequentially and independently. It audits after each attempt and logs verified,
+failed, and unverified outcomes without blocking application startup, readiness,
+or traffic. ServerAPI and ShortLinks do not create or verify indexes at startup.
+Startup never removes/replaces an index or cleans/backfills documents. A failed
+or successful startup is not proof of actual index state; use the audit endpoint.
+FreezerAnalysis's separate application database is outside this policy.
 
 ## Required evidence per rollout
 
@@ -44,7 +48,8 @@ below with the configured key; never document or commit a real key.
 
 `approvalToken` must exactly equal `apply-approved-indexes`. It is a procedural
 approval guard, not a secret. `approvedKeys` must be non-empty and may contain
-only the current manifest keys shown in this complete request:
+only current manifest keys. The following example illustrates an explicit
+operator-selected subset; it is not a complete manifest or startup result:
 
 ```bash
 curl -X POST "https://<BACKOFFICE_HOST>/api/mongoindexes/apply" \
@@ -75,8 +80,7 @@ curl -X POST "https://<BACKOFFICE_HOST>/api/mongoindexes/apply" \
 ```
 
 Do not add keys from older documents, guessed names, or a different environment.
-Keep the runtime manifest and operational manifest aligned; this complete request
-is the only index list duplicated here for copy-paste operation.
+Use the authenticated audit response and executable manifest for current keys.
 
 ## Prerequisites and response handling
 
@@ -98,9 +102,11 @@ and verify that every existing `youtubeContent.latestPublishedAt` is populated
 with the intended value. Record the backfill evidence and confirm the field is
 ready for indexed ordering.
 
-The operation processes approved keys sequentially. Each result reports either
-`created` or `skipped_existing`. If a later key fails, earlier indexes may already
-have been applied; re-audit the environment before retrying.
+The operator operation processes approved keys sequentially. Each result reports
+either `created` or `skipped_existing`. If a later key fails, earlier indexes may
+already have been applied; re-audit the environment before retrying. Startup
+processes manifest entries separately and logs failures; index failures do not
+block service startup.
 
 An index is `skipped_existing` only when its key pattern and declared uniqueness,
 partial filter, collation and expiration options match the manifest. A same-name
@@ -137,10 +143,12 @@ result reports `removed`; a missing legacy index reports `skipped_absent` and is
 idempotent. Unknown removal keys fail with HTTP 400. Mongo index conflicts and
 invalid operation errors are returned as clear bad-request responses.
 
-Only the blog-interaction index subset in ADR-022 is created at startup. Other
-indexes require the reviewed audit/apply process described here. Keep backups,
-rollback notes, audit/apply responses, and explain evidence with each
-environment-specific rollout record.
+BackOffice attempts all shared-platform manifest indexes at startup. Use the
+reviewed audit/apply operations here to diagnose and remediate failures. Keep
+backups, rollback notes, audit/apply responses, and explain evidence with each
+environment-specific rollout record. A missing unique index can permit
+duplicates while the service continues; a newly created TTL index can expire
+existing records according to its declared retention.
 
 Historical sample artifacts are not production evidence. Never record raw API keys,
 connection strings, or other connection details in documentation or operational

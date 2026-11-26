@@ -1,12 +1,14 @@
 import { PageTitle, TabbedWorkspace } from "@morwalpiz/layout";
-import { useFetcher, useLoaderData, useSearchParams } from "react-router";
+import { Link, useFetcher, useLoaderData, useSearchParams } from "react-router";
 import { useI18n } from "../../i18n";
-import type { action } from "./action";
 import type { AmmunitionLoaderResources } from "./loader";
 import Recipes from "../Recipes/component";
 import AmmunitionPanel from "./AmmunitionPanel";
 import { DeferredRoute } from "../shared";
 import { CardGridSkeleton, PanelSkeleton } from "../../components/loading/LoadingPrimitives";
+import type { ProductionActionResult } from "../submitProduction";
+import ProductionForm from "../ProductionForm";
+import type { OnlineInventoryAvailability } from "../onlineInventory";
 
 export default function Ammunition() {
   const resources = useLoaderData() as AmmunitionLoaderResources;
@@ -17,7 +19,7 @@ function AmmunitionContent({ resources }: { resources: AmmunitionLoaderResources
   const { t } = useI18n();
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = searchParams.get("tab") === "recipes" ? "recipes" : "ammunition";
-  const fetcher = useFetcher<typeof action>();
+  const fetcher = useFetcher<ProductionActionResult>();
 
   return (
     <div>
@@ -38,11 +40,62 @@ function AmmunitionContent({ resources }: { resources: AmmunitionLoaderResources
           {
             key: "ammunition",
             label: t("Ammunition"),
-            panel: <DeferredRoute data={resources.productionPanel} fallback={<PanelSkeleton />} >{([recipes, batches]) => <AmmunitionPanel recipes={recipes} batches={batches} fetcher={fetcher} />}</DeferredRoute>,
+            panel: <DeferredRoute data={resources.productionPanel} fallback={<PanelSkeleton />} >{([recipes, batches, productionRecords]) => (
+              <AmmunitionPanel
+                batches={batches}
+                productionRecords={productionRecords}
+                renderProductionEntry={(record, minimumQuantity, onSaved, onCancel) => (
+                  <DeferredRoute data={resources.inventory} fallback={<PanelSkeleton />}>
+                    {(availability) => availability.inventory
+                      ? (
+                        <ProductionForm
+                          key={record?.session.id ?? "new-production"}
+                          recipes={recipes}
+                          inventory={availability.inventory}
+                          fetcher={fetcher}
+                          record={record}
+                          minimumQuantity={minimumQuantity}
+                          onSaved={onSaved}
+                          onCancel={onCancel}
+                        />
+                      )
+                      : <InventoryUnavailable availability={availability} />}
+                  </DeferredRoute>
+                )}
+              />
+            )}</DeferredRoute>,
           },
-          { key: "recipes", label: t("Recipes"), panel: <DeferredRoute data={resources.recipes} fallback={<CardGridSkeleton />} >{(recipes) => <Recipes recipes={recipes} embedded />}</DeferredRoute> },
+          {
+            key: "recipes",
+            label: t("Recipes"),
+            panel: (
+              <DeferredRoute data={resources.recipes} fallback={<CardGridSkeleton />}>
+                {(recipes) => (
+                  <DeferredRoute
+                    data={resources.inventory}
+                    fallback={<Recipes recipes={recipes} inventory={null} inventoryLoading embedded />}
+                  >
+                    {(availability) => (
+                      <Recipes recipes={recipes} inventory={availability.inventory} embedded />
+                    )}
+                  </DeferredRoute>
+                )}
+              </DeferredRoute>
+            ),
+          },
         ]}
       />
     </div>
+  );
+}
+
+function InventoryUnavailable({ availability }: { availability: OnlineInventoryAvailability }) {
+  const { t } = useI18n();
+  return (
+    <section className="panel" role="status">
+      <h2>{availability.online ? t("Inventory summary unavailable") : t("Inventory is online-only")}</h2>
+      <p>{availability.error ?? t("Reconnect to see current supply stock and finance totals.")}</p>
+      <Link to="/inventory">{t("Open inventory")}</Link>
+    </section>
   );
 }

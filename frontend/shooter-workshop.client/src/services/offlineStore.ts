@@ -61,12 +61,66 @@ const rememberedAccountKey = "shooter-workshop.offline-account-id";
 const signedOutKey = "shooter-workshop.offline-signed-out";
 const changeEventName = "shooter-workshop-offline-change";
 
+function withoutDrawing(value: unknown): unknown {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return value;
+  const record = value as Record<string, unknown>;
+  if (!Object.prototype.hasOwnProperty.call(record, "drawing")) return value;
+  const snapshot = { ...record };
+  delete snapshot.drawing;
+  return snapshot;
+}
+
+function stripDrawingFromRecipes(value: unknown): unknown {
+  return Array.isArray(value) ? value.map(withoutDrawing) : value;
+}
+
+function stripDrawingFromBatches(value: unknown): unknown {
+  if (!Array.isArray(value)) return value;
+  return value.map(batch => {
+    if (!batch || typeof batch !== "object" || Array.isArray(batch)) return batch;
+    const record = batch as Record<string, unknown>;
+    const withoutTopLevelDrawing = withoutDrawing(record) as Record<string, unknown>;
+    const recipeSnapshot = withoutDrawing(record.recipeSnapshot);
+    if (recipeSnapshot === record.recipeSnapshot && withoutTopLevelDrawing === record) return batch;
+    return recipeSnapshot === record.recipeSnapshot
+      ? withoutTopLevelDrawing
+      : { ...withoutTopLevelDrawing, recipeSnapshot };
+  });
+}
+
+function removeDrawingFromCachedSnapshots(workspace: WorkshopWorkspace): WorkshopWorkspace {
+  const recipes = stripDrawingFromRecipes(workspace.datasets.recipes);
+  const batches = stripDrawingFromBatches(workspace.datasets.batches);
+  if (recipes === workspace.datasets.recipes && batches === workspace.datasets.batches) return workspace;
+  return {
+    ...workspace,
+    datasets: {
+      ...workspace.datasets,
+      recipes,
+      batches,
+    },
+  };
+}
+
 function openDatabase(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
-    const opening = indexedDB.open(databaseName, 1);
-    opening.onupgradeneeded = () => {
-      if (!opening.result.objectStoreNames.contains(workspaceStore)) {
-        opening.result.createObjectStore(workspaceStore, { keyPath: "accountId" });
+    const opening = indexedDB.open(databaseName, 2);
+    opening.onupgradeneeded = event => {
+      const database = opening.result;
+      if (!database.objectStoreNames.contains(workspaceStore)) {
+        database.createObjectStore(workspaceStore, { keyPath: "accountId" });
+      }
+      if (event.oldVersion < 2) {
+        const store = opening.transaction?.objectStore(workspaceStore);
+        const cursorRequest = store?.openCursor();
+        if (cursorRequest) {
+          cursorRequest.onsuccess = () => {
+            const cursor = cursorRequest.result;
+            if (!cursor) return;
+            cursor.update(removeDrawingFromCachedSnapshots(cursor.value as WorkshopWorkspace));
+            cursor.continue();
+          };
+        }
       }
     };
     opening.onsuccess = () => resolve(opening.result);
@@ -242,9 +296,14 @@ export async function saveOfflineDataset(
   dataset: OfflineDataset,
   value: unknown,
 ): Promise<void> {
+  const snapshot = dataset === "recipes"
+    ? stripDrawingFromRecipes(value)
+    : dataset === "batches"
+      ? stripDrawingFromBatches(value)
+      : value;
   await updateWorkspace(accountId, current => ({
     ...current,
-    datasets: { ...current.datasets, [dataset]: value },
+    datasets: { ...current.datasets, [dataset]: snapshot },
   }));
 }
 

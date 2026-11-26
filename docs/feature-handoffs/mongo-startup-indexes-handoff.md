@@ -1,5 +1,10 @@
 # Known Mongo indexes at startup
 
+> Historical delivery snapshot. Its narrow, fail-fast startup policy was
+> superseded by [ADR-029](../architecture/adr/ADR-029-nonblocking-mongo-index-startup.md),
+> which assigns complete shared-platform index attempts to BackOffice and does
+> not block application startup on index failures.
+
 ## Outcome
 
 Introduce an explicit, reviewed set of known indexes that BackOffice verifies

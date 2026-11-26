@@ -15,12 +15,26 @@ import type {
   ArchiveWorkshopPhysicalComponentRequest,
   DeleteWorkshopPhysicalComponentRequest,
   CreateWorkshopProductionRequest,
+  UpdateWorkshopProductionRequest,
+  CreateWorkshopInventoryProductRequest,
+  CreateWorkshopInventoryPurchaseRequest,
+  AdjustWorkshopInventoryLotRequest,
+  SetWorkshopInventoryLotStatusRequest,
+  RecordWorkshopComponentPurchaseRequest,
+  CorrectWorkshopComponentPurchaseRequest,
   CreateWorkshopRecipeRequest,
   UpdateWorkshopRecipeRequest,
   CreateWorkshopShootingRequest,
   CorrectWorkshopShootingRequest,
   WorkshopActivity,
   WorkshopAmmunitionBatch,
+  WorkshopInventory,
+  WorkshopInventoryProduct,
+  WorkshopInventoryLot,
+  WorkshopInventoryPurchase,
+  WorkshopComponentPurchase,
+  WorkshopProductionMutationContract,
+  WorkshopProductionRecord,
   WorkshopComponentDefinition,
   WorkshopFirearm,
   WorkshopOperationContract,
@@ -215,10 +229,70 @@ export const updateWorkshopRecipe = (
 export const getWorkshopBatches = (): Promise<WorkshopAmmunitionBatch[]> =>
   request(accountApiService.get(`${frontendEndpoints.WORKSHOP_AMMUNITION}/batches`));
 
+export const getWorkshopInventory = (): Promise<WorkshopInventory> =>
+  request(accountApiService.get(frontendEndpoints.WORKSHOP_INVENTORY));
+
+export const createWorkshopInventoryProduct = (
+  body: CreateWorkshopInventoryProductRequest,
+): Promise<WorkshopInventoryProduct> =>
+  request(accountApiService.post(frontendEndpoints.WORKSHOP_INVENTORY_PRODUCTS, body));
+
+export const recordWorkshopInventoryPurchase = (
+  body: CreateWorkshopInventoryPurchaseRequest,
+): Promise<WorkshopInventoryPurchase> =>
+  request(accountApiService.post(frontendEndpoints.WORKSHOP_INVENTORY_PURCHASES, body));
+
+export const adjustWorkshopInventoryLot = (
+  body: AdjustWorkshopInventoryLotRequest,
+): Promise<WorkshopInventoryLot> =>
+  request(accountApiService.post(frontendEndpoints.WORKSHOP_INVENTORY_ADJUSTMENTS, body));
+
+export const setWorkshopInventoryLotStatus = (
+  lotId: string,
+  body: SetWorkshopInventoryLotStatusRequest,
+): Promise<WorkshopInventoryLot> =>
+  request(accountApiService.post(
+    frontendEndpoints.WORKSHOP_INVENTORY_LOT_STATUS.replace("{lotId}", encodeURIComponent(lotId)),
+    body,
+  ));
+
+export const recordWorkshopComponentPurchase = (
+  componentId: string,
+  body: RecordWorkshopComponentPurchaseRequest,
+): Promise<WorkshopComponentPurchase> =>
+  request(accountApiService.post(
+    frontendEndpoints.WORKSHOP_COMPONENT_PURCHASE.replace("{componentId}", encodeURIComponent(componentId)),
+    body,
+  ));
+
+export const correctWorkshopComponentPurchase = (
+  componentId: string,
+  body: CorrectWorkshopComponentPurchaseRequest,
+): Promise<WorkshopComponentPurchase> =>
+  request(accountApiService.put(
+    frontendEndpoints.WORKSHOP_COMPONENT_PURCHASE.replace("{componentId}", encodeURIComponent(componentId)),
+    body,
+  ));
+
+export const getWorkshopProductionRecords = (): Promise<WorkshopProductionRecord[]> =>
+  request(accountApiService.get(frontendEndpoints.WORKSHOP_AMMUNITION_PRODUCTION));
+
 export const recordWorkshopProduction = (
   body: CreateWorkshopProductionRequest,
-): Promise<WorkshopOperationContract> =>
-  request(accountApiService.post(`${frontendEndpoints.WORKSHOP_AMMUNITION}/production`, body));
+): Promise<WorkshopProductionMutationContract> =>
+  request(accountApiService.post(frontendEndpoints.WORKSHOP_AMMUNITION_PRODUCTION, body));
+
+export const updateWorkshopProduction = (
+  sessionId: string,
+  body: UpdateWorkshopProductionRequest,
+): Promise<WorkshopProductionMutationContract> =>
+  request(accountApiService.put(
+    frontendEndpoints.WORKSHOP_AMMUNITION_PRODUCTION_DETAIL.replace(
+      "{sessionId}",
+      encodeURIComponent(sessionId),
+    ),
+    body,
+  ));
 
 export const recordWorkshopShooting = (
   body: CreateWorkshopShootingRequest,

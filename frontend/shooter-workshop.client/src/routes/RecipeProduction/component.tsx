@@ -4,17 +4,18 @@ import { Link, useAsyncError, useFetcher, useLoaderData, useRouteError, isRouteE
 import { PageTitle } from "@morwalpiz/layout";
 import type { WorkshopRecipe } from "@morwalpizvideo/models";
 import { useI18n } from "../../i18n";
-import type { action } from "./action";
-import type { RecipeProductionLoaderData } from "./loader";
-import { DeferredRoute, type DeferredRouteData } from "../shared";
-import { DetailSkeleton } from "../../components/loading/LoadingPrimitives";
+import type { RecipeProduction, RecipeProductionLoaderResources } from "./loader";
+import { DeferredRoute } from "../shared";
+import { DetailSkeleton, PanelSkeleton } from "../../components/loading/LoadingPrimitives";
+import ProductionForm from "../ProductionForm";
+import type { ProductionActionResult } from "../submitProduction";
+import type { OnlineInventoryAvailability } from "../onlineInventory";
 
 const fields = [
   ["caliber", "Caliber"],
   ["oal", "OAL"],
   ["bulletWeight", "Bullet weight"],
   ["bulletForm", "Bullet form"],
-  ["drawing", "Drawing"],
   ["primer", "Primer"],
   ["powder", "Powder"],
   ["powderWeight", "Powder weight"],
@@ -41,13 +42,23 @@ export function RecipeProductionError() {
 }
 
 export default function RecipeProduction() {
-  const { data } = useLoaderData() as DeferredRouteData<RecipeProductionLoaderData>;
-  return <DeferredRoute data={data} errorElement={<RecipeProductionError />} fallback={<DetailSkeleton />}>{(resolved) => <RecipeProductionContent recipe={resolved} />}</DeferredRoute>;
+  const resources = useLoaderData() as RecipeProductionLoaderResources;
+  return (
+    <DeferredRoute data={resources.recipe} errorElement={<RecipeProductionError />} fallback={<DetailSkeleton />}>
+      {(recipe) => <RecipeProductionContent recipe={recipe} inventory={resources.inventory} />}
+    </DeferredRoute>
+  );
 }
 
-function RecipeProductionContent({ recipe }: { recipe: RecipeProductionLoaderData }) {
+function RecipeProductionContent({
+  recipe,
+  inventory,
+}: {
+  recipe: RecipeProduction;
+  inventory: RecipeProductionLoaderResources["inventory"];
+}) {
   const { t } = useI18n();
-  const fetcher = useFetcher<typeof action>();
+  const fetcher = useFetcher<ProductionActionResult>();
   const [qrDataUrl, setQrDataUrl] = useState<string>();
   const [qrError, setQrError] = useState(false);
   const destination = `${window.location.origin}/recipes/${encodeURIComponent(recipe.id)}/produce`;
@@ -102,31 +113,29 @@ function RecipeProductionContent({ recipe }: { recipe: RecipeProductionLoaderDat
           )}
         </section>
       </div>
-      <section className="panel form-panel recipe-production-form">
-        <h2>{t("Record production")}</h2>
-        <fetcher.Form method="post">
-          <input type="hidden" name="recipeId" value={recipe.id} />
-          <div className="form-grid">
-            <label>
-              {t("Production date")}
-              <input name="productionDate" type="date" defaultValue={new Date().toISOString().slice(0, 10)} required />
-            </label>
-            <label>
-              {t("Quantity produced")}
-              <input name="quantityProduced" type="number" min="1" step="1" required />
-            </label>
-          </div>
-          <label>
-            {t("Notes")}
-            <textarea name="notes" />
-          </label>
-          {fetcher.data && !fetcher.data.ok && <p className="form-error" role="alert">{fetcher.data.error}</p>}
-          {fetcher.data?.ok && <p className="form-success" role="status">{t("Production recorded.")}</p>}
-          <button className="button button-primary" disabled={fetcher.state !== "idle"}>
-            {fetcher.state === "idle" ? t("Record production") : t("Saving…")}
-          </button>
-        </fetcher.Form>
-      </section>
+      <DeferredRoute data={inventory} fallback={<PanelSkeleton />}>
+        {(availability) => availability.inventory
+          ? (
+            <ProductionForm
+              recipes={[recipe]}
+              inventory={availability.inventory}
+              fixedRecipe={recipe}
+              fetcher={fetcher}
+            />
+          )
+          : <InventoryUnavailable availability={availability} />}
+      </DeferredRoute>
     </div>
+  );
+}
+
+function InventoryUnavailable({ availability }: { availability: OnlineInventoryAvailability }) {
+  const { t } = useI18n();
+  return (
+    <section className="panel" role="status">
+      <h2>{availability.online ? t("Inventory summary unavailable") : t("Inventory is online-only")}</h2>
+      <p>{availability.error ?? t("Reconnect to see current supply stock and finance totals.")}</p>
+      <Link to="/inventory">{t("Open inventory")}</Link>
+    </section>
   );
 }

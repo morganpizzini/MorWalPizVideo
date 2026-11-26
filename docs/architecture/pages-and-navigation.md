@@ -144,8 +144,8 @@ internal, and external target URLs; public external items are marked `OpenInNewT
 - Page mutations reset and purge both page and navigation cache tags because page status,
   URL, deletion, and navigation references can affect both public surfaces. Navigation
   mutations reset and purge the navigation tags.
-- Indexes are not created at startup. Run the authenticated Mongo index audit/apply
-  operation during a maintenance window after resolving duplicate normalized URLs. The
-  current page authority is `pages_url.unique` / `ux_pages_url_ci`. The legacy
-  `pages_url` / `ix_pages_url` pair is a removal key only and is not a current
-  apply key.
+- BackOffice attempts the `pages_url.unique` / `ux_pages_url_ci` index through its
+  non-blocking startup manifest. Startup does not prove the index exists; inspect
+  the authenticated audit result and resolve duplicate normalized URLs if
+  creation fails. The legacy `pages_url` / `ix_pages_url` pair is a removal key
+  only and is not a current apply key.

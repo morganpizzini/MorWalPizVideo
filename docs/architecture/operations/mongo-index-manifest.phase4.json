@@ -107,7 +107,7 @@
         "channelId": 1
       },
       "unique": true,
-      "notes": "Allows one importer-owned settings snapshot per channel. Audit duplicate documents, then apply manually through the approved Mongo index operation before importer rollout."
+      "notes": "Allows one importer-owned settings snapshot per channel. BackOffice attempts this index at startup; audit duplicate documents and verify actual state before relying on uniqueness."
     },
     {
       "key": "compilations_url.unique",

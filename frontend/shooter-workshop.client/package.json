@@ -6,7 +6,8 @@
   "scripts": {
     "build": "tsc -b && vite build",
     "dev": "vite",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:browser": "playwright test --config=playwright.config.ts"
   },
   "dependencies": {
     "@morwalpiz/layout": "1.0.0",
@@ -22,6 +23,7 @@
   "devDependencies": {
     "@testing-library/dom": "^10.0.0",
     "@testing-library/react": "^16.3.2",
+    "@playwright/test": "^1.64.1",
     "@types/node": "^22.10.5",
     "@types/react": "^19.0.10",
     "@types/react-dom": "^19.0.4",

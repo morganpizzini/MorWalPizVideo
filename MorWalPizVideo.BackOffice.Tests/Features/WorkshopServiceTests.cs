@@ -1,3 +1,7 @@
+using System.Text.Json;
+using MongoDB.Bson;
+using MongoDB.Bson.Serialization;
+using MorWalPiz.Contracts.Contracts.Workshop;
 using MorWalPizVideo.Domain.Scenarios;
 using MorWalPizVideo.Domain.Workshop;
 using MorWalPizVideo.Models.Constraints;
@@ -8,6 +12,62 @@ namespace MorWalPizVideo.BackOffice.Tests.Features;
 
 public sealed class WorkshopServiceTests
 {
+    [Fact]
+    public void Stored_drawing_fields_are_tolerated_and_preserved_without_exposing_drawing_contracts()
+    {
+        var id = ObjectId.GenerateNewId().ToString();
+        var snapshot = new RecipeSnapshot("Practice", "9mm", null, null, null, null, null, null, null);
+
+        AssertDrawingRoundTrips(new AmmoRecipe
+        {
+            Id = id, AccountId = "account-1", Name = "Practice", Caliber = "9mm"
+        });
+        AssertDrawingRoundTrips(new AmmoRecipeVersion
+        {
+            Id = id, AccountId = "account-1", RecipeId = id, Version = 1, Snapshot = snapshot
+        }, "snapshot");
+        AssertDrawingRoundTrips(new ProductionSession
+        {
+            Id = id, AccountId = "account-1", RecipeId = id, RecipeSnapshot = snapshot
+        }, "recipeSnapshot");
+        AssertDrawingRoundTrips(new AmmoBatch
+        {
+            Id = id, AccountId = "account-1", RecipeId = id, RecipeSnapshot = snapshot
+        }, "recipeSnapshot");
+
+        var request = JsonSerializer.Deserialize<WorkshopRecipeRequest>(
+            """{"name":"Practice","caliber":"9mm","drawing":"legacy drawing"}""",
+            new JsonSerializerOptions(JsonSerializerDefaults.Web));
+
+        Assert.NotNull(request);
+        Assert.Equal("Practice", request.Name);
+        Assert.Null(typeof(AmmoRecipe).GetProperty("Drawing"));
+        Assert.Null(typeof(RecipeSnapshot).GetProperty("Drawing"));
+        Assert.Null(typeof(WorkshopRecipeRequest).GetProperty("Drawing"));
+        Assert.DoesNotContain("drawing",
+            JsonSerializer.Serialize(request, new JsonSerializerOptions(JsonSerializerDefaults.Web)).ToLowerInvariant());
+
+        static void AssertDrawingRoundTrips<T>(T entity, string? snapshotElement = null) where T : BaseEntity
+        {
+            var storedDocument = entity.ToBsonDocument();
+            if (snapshotElement is null)
+                storedDocument["drawing"] = "legacy drawing";
+            else
+                storedDocument[snapshotElement].AsBsonDocument["drawing"] = "legacy drawing";
+
+            var restoredEntity = BsonSerializer.Deserialize<T>(storedDocument);
+            var restored = restoredEntity.ToBsonDocument();
+            var retainedDrawing = snapshotElement is null
+                ? restored["drawing"]
+                : restored[snapshotElement].AsBsonDocument["drawing"];
+
+            Assert.Equal("legacy drawing", retainedDrawing.AsString);
+            Assert.DoesNotContain("drawing",
+                JsonSerializer.Serialize(restoredEntity, new JsonSerializerOptions(JsonSerializerDefaults.Web))
+                    .ToLowerInvariant());
+        }
+    }
+
     [Fact]
     public async Task Activities_store_human_readable_entity_labels_instead_of_ids()
     {
@@ -297,9 +357,11 @@ public sealed class WorkshopServiceTests
     public async Task Recipe_writes_canonicalize_oal_and_reject_precision_beyond_two_digits()
     {
         var (service, _, _) = CreateService();
+        var primer = await service.CreateSupplyProductAsync("account-1", "primer", null, "Primer", "recipe-primer");
+        var powder = await service.CreateSupplyProductAsync("account-1", "powder", null, "Powder", "recipe-powder");
 
         var recipe = await service.CreateRecipeAsync("account-1",
-            new("9mm", "9x19", "1.230", null, null, null, null, null, null, null));
+            new("9mm", "9x19", "1.230", null, null, null, null, null, null, primer.Id, powder.Id));
 
         Assert.Equal("1.23", recipe.Oal);
         await Assert.ThrowsAsync<WorkshopValidationException>(() => service.CreateRecipeAsync("account-1",
@@ -426,6 +488,161 @@ public sealed class WorkshopServiceTests
         Assert.Equal(0, analytics.ShootingRounds);
         Assert.Equal(0, analytics.ShootingSessions);
         Assert.Equal(0, analytics.CorrectionCount);
+    }
+
+    [Fact]
+    public async Task Production_edits_reverse_and_replace_batch_and_fifo_lot_effects_without_erasing_history()
+    {
+        var (service, scenario, firearm) = CreateService();
+        var primer = await service.CreateSupplyProductAsync("account-1", "primer", null, "Primer A", "primer-product");
+        var bullet = await service.CreateSupplyProductAsync("account-1", "bullet", "Brand", "Bullet A", "bullet-product");
+        var powder = await service.CreateSupplyProductAsync("account-1", "powder", null, "Powder A", "powder-product");
+        var primerPurchase = await service.RecordSupplyPurchaseAsync("account-1", primer.Id,
+            DateTime.UtcNow.AddDays(-4), 300, 30m, "USD", "primer-buy");
+        var firstBulletPurchase = await service.RecordSupplyPurchaseAsync("account-1", bullet.Id,
+            DateTime.UtcNow.AddDays(-3), 100, 100m, "USD", "bullet-buy-1");
+        var secondBulletPurchase = await service.RecordSupplyPurchaseAsync("account-1", bullet.Id,
+            DateTime.UtcNow.AddDays(-2), 100, 200m, "USD", "bullet-buy-2");
+        await service.RecordSupplyPurchaseAsync("account-1", powder.Id,
+            DateTime.UtcNow.AddDays(-1), 1, 10m, "USD", "powder-buy");
+        var recipe = await service.CreateRecipeAsync("account-1",
+            new("Practice", "9mm", null, null, null, null, null, null, null, primer.Id, powder.Id));
+
+        var created = await service.RecordProductionWithSuppliesAsync("account-1",
+            new(recipe.Id, DateTime.UtcNow.AddHours(-2), 50, null, "production-create", recipe.Version,
+                bullet.Id, [new(primerPurchase.Lots.Single().Id, 50)],
+                [new(firstBulletPurchase.Lots.Single().Id, 50)]));
+
+        var increased = await service.UpdateProductionAsync("account-1", created.Session.Id,
+            new(new(recipe.Id, DateTime.UtcNow.AddHours(-1), 120, "corrected", "production-edit-1",
+                    recipe.Version, bullet.Id, [new(primerPurchase.Lots.Single().Id, 120)],
+                    [new(firstBulletPurchase.Lots.Single().Id, 100), new(secondBulletPurchase.Lots.Single().Id, 20)]),
+                created.Session.Revision));
+
+        Assert.Equal(120, increased.Session.QuantityProduced);
+        Assert.Equal(120, increased.Batch.OnHandQuantity);
+        Assert.Equal(180, scenario.Read<WorkshopSupplyLot>(DbCollections.WorkshopSupplyLots)
+            .Single(x => x.Id == primerPurchase.Lots.Single().Id).AvailableQuantity);
+        Assert.Equal(0, scenario.Read<WorkshopSupplyLot>(DbCollections.WorkshopSupplyLots)
+            .Single(x => x.Id == firstBulletPurchase.Lots.Single().Id).AvailableQuantity);
+        Assert.Equal(80, scenario.Read<WorkshopSupplyLot>(DbCollections.WorkshopSupplyLots)
+            .Single(x => x.Id == secondBulletPurchase.Lots.Single().Id).AvailableQuantity);
+
+        var decreased = await service.UpdateProductionAsync("account-1", created.Session.Id,
+            new(new(recipe.Id, DateTime.UtcNow, 75, "smaller correction", "production-edit-2",
+                    recipe.Version, bullet.Id, [new(primerPurchase.Lots.Single().Id, 75)],
+                    [new(firstBulletPurchase.Lots.Single().Id, 75)]),
+                increased.Session.Revision));
+        Assert.Equal(75, decreased.Session.QuantityProduced);
+        Assert.Equal(75, decreased.Batch.OnHandQuantity);
+        Assert.Equal(25, scenario.Read<WorkshopSupplyLot>(DbCollections.WorkshopSupplyLots)
+            .Single(x => x.Id == firstBulletPurchase.Lots.Single().Id).AvailableQuantity);
+        Assert.Equal(100, scenario.Read<WorkshopSupplyLot>(DbCollections.WorkshopSupplyLots)
+            .Single(x => x.Id == secondBulletPurchase.Lots.Single().Id).AvailableQuantity);
+        Assert.Equal(3, scenario.Read<WorkshopOperation>(DbCollections.WorkshopOperations)
+            .Count(x => x.OperationType is WorkshopOperationType.ProductionRecorded or WorkshopOperationType.ProductionEdited));
+        var records = await service.GetProductionRecordsAsync("account-1");
+        var record = Assert.Single(records);
+        Assert.False(record.ProjectionPending);
+        Assert.Equal(2, record.Corrections.Count);
+        Assert.Equal(50, record.Corrections[0].Correction.PreviousQuantity);
+        Assert.Equal(120, record.Corrections[0].Correction.Quantity);
+        Assert.Equal(120, record.Corrections[1].Correction.PreviousQuantity);
+        Assert.Equal(75, record.Corrections[1].Correction.Quantity);
+
+        await service.RecordShootingAsync("account-1",
+            new(firearm.Id, DateTime.UtcNow, 20, null, [new(recipe.Id, 20)], 0, [], "consume-edited-batch"));
+        await Assert.ThrowsAsync<WorkshopConflictException>(() => service.UpdateProductionAsync("account-1",
+            created.Session.Id,
+            new(new(recipe.Id, DateTime.UtcNow, 19, null, "production-edit-too-small", recipe.Version,
+                    bullet.Id, [new(primerPurchase.Lots.Single().Id, 19)],
+                    [new(firstBulletPurchase.Lots.Single().Id, 19)]),
+                decreased.Session.Revision)));
+        var projectedBatch = scenario.Read<AmmoBatch>(DbCollections.WorkshopAmmoBatches).Single();
+        scenario.Replace(DbCollections.WorkshopAmmoBatches, projectedBatch with { OnHandQuantity = 1 });
+        Assert.True(Assert.Single(await service.GetProductionRecordsAsync("account-1")).ProjectionPending);
+    }
+
+    [Fact]
+    public async Task Production_edit_preserves_the_original_recipe_snapshot_after_recipe_changes()
+    {
+        var (service, _, _) = CreateService();
+        var primer = await service.CreateSupplyProductAsync("account-1", "primer", null, "Primer", "snapshot-primer");
+        var bullet = await service.CreateSupplyProductAsync("account-1", "bullet", null, "Bullet", "snapshot-bullet");
+        var powder = await service.CreateSupplyProductAsync("account-1", "powder", null, "Powder", "snapshot-powder");
+        var primerPurchase = await service.RecordSupplyPurchaseAsync("account-1", primer.Id,
+            DateTime.UtcNow.AddDays(-2), 100, 10m, "USD", "snapshot-primer-purchase");
+        var bulletPurchase = await service.RecordSupplyPurchaseAsync("account-1", bullet.Id,
+            DateTime.UtcNow.AddDays(-1), 100, 20m, "USD", "snapshot-bullet-purchase");
+        var recipe = await service.CreateRecipeAsync("account-1",
+            new("Original recipe", "9mm", null, null, null, null, null, null, null, primer.Id, powder.Id));
+        var produced = await service.RecordProductionWithSuppliesAsync("account-1",
+            new(recipe.Id, DateTime.UtcNow, 50, null, "snapshot-production", recipe.Version,
+                bullet.Id, [new(primerPurchase.Lots.Single().Id, 50)],
+                [new(bulletPurchase.Lots.Single().Id, 50)]));
+
+        var changedRecipe = await service.UpdateRecipeAsync("account-1", recipe.Id, recipe.Version,
+            new("Revised recipe", "9mm", null, null, null, null, null, null, null,
+                primer.Id, powder.Id, recipe.Version),
+            "snapshot-recipe-edit");
+        var corrected = await service.UpdateProductionAsync("account-1", produced.Session.Id,
+            new(new(recipe.Id, DateTime.UtcNow, 55, "corrected quantity", "snapshot-production-edit",
+                    produced.Session.RecipeSnapshot.Version, bullet.Id,
+                    [new(primerPurchase.Lots.Single().Id, 55)],
+                    [new(bulletPurchase.Lots.Single().Id, 55)]),
+                produced.Session.Revision));
+
+        Assert.Equal(recipe.Version + 1, changedRecipe.Version);
+        Assert.Equal("Original recipe", corrected.Session.RecipeSnapshot.Name);
+        Assert.Equal(recipe.Version, corrected.Session.RecipeSnapshot.Version);
+        Assert.Equal("Revised recipe", changedRecipe.Name);
+        Assert.Single(Assert.Single(await service.GetProductionRecordsAsync("account-1")).Corrections);
+    }
+
+    [Fact]
+    public async Task Inventory_costs_use_consumption_facts_not_manual_count_adjustments_and_component_corrections_are_single_spend()
+    {
+        var (service, scenario, _) = CreateService();
+        var primer = await service.CreateSupplyProductAsync("account-1", "primer", null, "Primer", "inventory-primer");
+        var bullet = await service.CreateSupplyProductAsync("account-1", "bullet", null, "Bullet", "inventory-bullet");
+        var powder = await service.CreateSupplyProductAsync("account-1", "powder", null, "Powder", "inventory-powder");
+        var primerPurchase = await service.RecordSupplyPurchaseAsync("account-1", primer.Id,
+            DateTime.UtcNow.AddDays(-3), 10, 10m, "USD", "inventory-primer-purchase");
+        var bulletPurchase = await service.RecordSupplyPurchaseAsync("account-1", bullet.Id,
+            DateTime.UtcNow.AddDays(-2), 10, 20m, "USD", "inventory-bullet-purchase");
+        await service.RecordSupplyPurchaseAsync("account-1", powder.Id,
+            DateTime.UtcNow.AddDays(-1), 1, 5m, "USD", "inventory-powder-purchase");
+        var recipe = await service.CreateRecipeAsync("account-1",
+            new("Inventory test", "9mm", null, null, null, null, null, null, null, primer.Id, powder.Id));
+        var componentDefinition = await service.CreateComponentDefinitionAsync("account-1",
+            new("Part", null, null, null, null, WorkshopTrackingMode.Manual, null));
+        var component = await service.CreateComponentAsync("account-1",
+            new(componentDefinition.Id, null, null, null, null, null, null, null, 0, null));
+        var componentPrice = await service.RecordComponentPurchaseAsync("account-1", component.Id,
+            DateTime.UtcNow.AddDays(-5), 15m, "USD", "component-purchase-1");
+        var created = await service.RecordProductionWithSuppliesAsync("account-1",
+            new(recipe.Id, DateTime.UtcNow, 4, null, "inventory-production", recipe.Version,
+                bullet.Id, [new(primerPurchase.Lots.Single().Id, 4)],
+                [new(bulletPurchase.Lots.Single().Id, 4)]));
+        var afterProduction = await service.GetInventoryAsync("account-1");
+        Assert.Equal(17m, Assert.Single(afterProduction.PartialConsumptionCosts).Total);
+        Assert.Equal(50m, Assert.Single(afterProduction.Spending).Total);
+
+        var primerLot = scenario.Read<WorkshopSupplyLot>(DbCollections.WorkshopSupplyLots)
+            .Single(x => x.Id == primerPurchase.Lots.Single().Id);
+        await service.AdjustSupplyStockAsync("account-1", primerLot.Id, 3, primerLot.Revision,
+            "physical recount", "inventory-adjust");
+        var afterAdjustment = await service.GetInventoryAsync("account-1");
+        Assert.Equal(17m, Assert.Single(afterAdjustment.PartialConsumptionCosts).Total);
+
+        var corrected = await service.CorrectComponentPurchaseAsync("account-1", component.Id,
+            componentPrice.PurchaseDate, 17m, "USD", componentPrice.Revision, "receipt correction",
+            "component-correction");
+        var afterCorrection = await service.GetInventoryAsync("account-1");
+        Assert.Equal(2, Assert.Single(afterCorrection.ComponentPurchases).History.Count);
+        Assert.Equal(52m, Assert.Single(afterCorrection.Spending).Total);
+        Assert.Equal(17m, corrected.TotalPrice);
+        Assert.Equal(4, created.Session.QuantityProduced);
     }
 
     private static (WorkshopService Service, FakeScenario Scenario, Firearm Firearm) CreateService()

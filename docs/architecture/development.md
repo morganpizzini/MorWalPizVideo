@@ -73,6 +73,25 @@ Studio) use this fake.
 | VideoImporter | Temporary SQLite, fake BackOffice, fake YouTube |
 | InsightScanner | Fake scan sources and fake BackOffice client |
 
+## Dev Container Browser Setup
+
+The repository Dev Container provides the .NET 11 SDK and Node 22. Its
+post-create setup installs the frozen Yarn workspace, Playwright's Linux
+browser dependencies, and the Chromium version resolved from the frontend
+lockfile, and creates a local ASP.NET Core HTTPS development certificate.
+Rebuild the container after changing its image or setup script.
+Chromium being installed does not provide a browser tool to Copilot or
+Impeccable; each agent/browser integration must separately be available in the
+remote VS Code session.
+
+The Shooter Workshop local API uses the existing Development configuration,
+which enables its mock repositories. Register and sign in through the
+Workshop UI; account sessions and Workshop mock records are in-memory and are
+lost when ServerAPI restarts. Protected routes still require the real
+PublicAccount session cookie and CSRF flow. Do not add a known development
+password, bypass authentication, or save browser session state in the
+repository.
+
 ## Configuration Hygiene
 
 - Use user secrets for developer credentials that are genuinely required.

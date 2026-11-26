@@ -3,6 +3,25 @@
 - **Status:** Accepted for the Workshop delivery baseline
 - **Date:** 2026-11-13
 
+## Finance and inventory addendum (2026-11-25)
+
+The finance/inventory feature uses the existing public-account Workshop boundary
+but does not introduce an account-wide coordination gate or require MongoDB
+transactions. The user expects online operations by one person and accepts the
+risk that an interruption between separate writes can leave a partial production,
+lot, or batch update. This is a known limitation, not an atomicity guarantee.
+
+Production records are editable. An edit must adjust the recorded primer/bullet
+lot effects and produced-batch quantity and retain correction history. Users must
+be able to inspect and correct records after an uncertain interruption. Explicit
+server rejection is a failed operation; a lost response may have an unknown
+outcome, so the client must preserve request identity for any retry it offers.
+
+This addendum narrows only the new finance/inventory consistency scope. It does
+not remove the existing immutable-ledger/replay rules for shooting and other
+Workshop operations, nor does it relax account ownership, validation, stock
+non-negativity checks, or auditability.
+
 ## Context
 
 Shooter Workshop records one user operation that can affect several independently

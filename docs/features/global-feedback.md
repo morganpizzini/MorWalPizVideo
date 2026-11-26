@@ -40,17 +40,18 @@ Feedback uses a dedicated global MongoDB collection with:
 
 - a unique client request-ID index for idempotent retries;
 - creation-order and status/application query indexes;
-- an expiry field reserved for reviewed retention enforcement.
-- BackOffice startup automatically verifies/creates the non-unique
-  creation-order index used by the management list. The unique request-ID,
-  status/application and TTL indexes remain reviewed operational actions; the
-  TTL index is not automatically applied.
+- an expiry field used by the declared TTL index.
+- BackOffice attempts all four indexes through its non-blocking full-manifest
+  startup initializer. Startup does not gate feedback intake or management;
+  inspect actual index state through the audit endpoint. Missing unique indexes
+  can permit duplicate writes before they are created.
 
-The proposed 90-day TTL is destructive and must not be applied until the
-retention owner approves the privacy notice, unresolved-report policy, and
-backup retention. The remaining unique and query indexes must be reviewed and applied before
-production intake. Production must also prove that ServerAPI and BackOffice
-reach the intended shared feedback store.
+The declared 90-day TTL can delete already-expired documents when created.
+Review the privacy notice, unresolved-report policy, existing data and backup
+retention before enabling startup creation in an environment. This is an
+operational recommendation, not an application startup or readiness gate.
+Production should also verify that ServerAPI and BackOffice reach the intended
+shared feedback store.
 
 A dedicated limiter protects intake independently from login and newsletter
 limits. Trusted-proxy configuration and the effective distributed rate cap
@@ -80,13 +81,15 @@ The 2026-11-14 implementation record reported:
 
 These are historical source-level results, not deployed approval.
 
-## Remaining release gates
+## Remaining release checks
 
 1. Confirm the production intake and management hosts share the intended
    collection.
 2. Grant `feedback.view` and `feedback.manage` only to reviewed staff groups.
-3. Audit and apply unique/query indexes before accepting writes.
-4. Approve retention and backup policy before applying the TTL index.
+3. Review duplicate data and verify the actual unique/query indexes before
+   relying on their guarantees. This is operational risk management, not a
+   startup or release gate; missing constraints do not block intake.
+4. Review retention and backup policy before enabling automatic TTL creation.
 5. Verify real-browser CSRF/CORS behavior from the Workshop origin, including
    authenticated and anonymous intake where enabled.
 6. Verify trusted-proxy and effective rate-limit behavior in the deployed

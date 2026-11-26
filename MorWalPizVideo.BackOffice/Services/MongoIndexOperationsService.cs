@@ -96,6 +96,22 @@ public sealed class MongoIndexOperationsService(IMongoDatabase database) : IMong
             Collection: DbCollections.YouTubeContent,
             Name: "ix_youtubecontent_isprivate_creation_desc",
             Keys: new BsonDocument { { "isPrivate", 1 }, { "creationDateTime", -1 } }),
+        new(
+            Key: "blog.channel_slug.unique",
+            Collection: DbCollections.BlogPosts,
+            Name: "blog_channel_slug_unique",
+            Keys: new BsonDocument { { "channelId", 1 }, { "slug", 1 } },
+            Unique: true),
+        new(
+            Key: "blog.channel_publishedat_id",
+            Collection: DbCollections.BlogPosts,
+            Name: "blog_channel_publishedat_id",
+            Keys: new BsonDocument
+            {
+                { "channelId", 1 },
+                { "publishedAt", -1 },
+                { "_id", 1 }
+            }),
         .. YouTubeContentMongoIndexes.Manifest.Select(index => new MongoIndexManifestEntry(
             index.Key,
             index.Collection,

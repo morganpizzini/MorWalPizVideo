@@ -1,6 +1,6 @@
 # ADR-008: Mongo Index And Migration Ownership
 
-- **Status:** Accepted
+- **Status:** Superseded for shared-platform startup creation by [ADR-029](ADR-029-nonblocking-mongo-index-startup.md); retained for reviewed operator operations and data-migration safety
 - **Date:** 2026-08-01
 
 ## Context
@@ -10,6 +10,11 @@ MongoDB is project-owned but no source-managed indexes or migrations exist. Quer
 ## Decision
 
 Maintain reviewed index definitions and idempotent data migration/backfill operations in source or an explicit operational manifest. Audit and normalize data before unique indexes. Use additive fields, resumable batches, compatibility reads, query-plan validation, and backups. Destructive index removal requires a separate API operation backed by a source-controlled allowlist and a verified replacement definition.
+
+For shared-platform startup creation, this policy is superseded by ADR-029.
+Audits, explicit operator apply/remove operations, data cleanup, backfills, and
+structural index migrations remain governed by this ADR and the current
+operational runbook.
 
 Repositories push filters, projections, ordering, limits, and atomic updates into MongoDB.
 

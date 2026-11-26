@@ -38,7 +38,11 @@ public sealed record WorkshopMaintenanceCommand(string? FirearmId, string? Compo
 public sealed record WorkshopShootingCommand(string FirearmId, DateTime Date, long TotalRounds, string? Notes,
     IReadOnlyList<ShootingRecipeConsumption> RecipeConsumptions, long UntrackedAmmunition,
     IReadOnlyList<ShootingUsageSegment> UsageSegments, string IdempotencyKey);
-public sealed record WorkshopProductionCommand(string RecipeId, DateTime ProductionDate, long Quantity, string? Notes, string IdempotencyKey);
+public sealed record WorkshopProductionSelection(string LotId, long Quantity);
+public sealed record WorkshopProductionCommand(string RecipeId, DateTime ProductionDate, long Quantity, string? Notes,
+    string IdempotencyKey, long RecipeVersion = 0, string BulletProductId = "",
+    IReadOnlyList<WorkshopProductionSelection>? PrimerLotAllocations = null,
+    IReadOnlyList<WorkshopProductionSelection>? BulletLotAllocations = null);
 public sealed record WorkshopAllocationCommand(string BatchId, string FirearmId, long Quantity, string? Notes, string IdempotencyKey);
 public sealed record WorkshopReleaseCommand(string AllocationId, long Quantity, long ExpectedRevision, string IdempotencyKey);
 public sealed record WorkshopReallocateCommand(string SourceAllocationId, string DestinationFirearmId,
@@ -78,7 +82,7 @@ public sealed record WorkshopShootingSessionData(ShootingSession Session, bool S
 public sealed class WorkshopValidationException(string message) : Exception(message);
 public sealed class WorkshopConflictException(string message) : Exception(message);
 
-public sealed class WorkshopService(
+public sealed partial class WorkshopService(
     IWorkshopRepository repository,
     WorkshopReconciliationService reconciliation,
     TimeProvider timeProvider)
@@ -518,6 +522,7 @@ public sealed class WorkshopService(
             ?? throw new WorkshopValidationException("Recipe was not found.");
         if (recipe.Version != expectedVersion) throw new WorkshopConflictException("Recipe changed. Reload before updating.");
         var next = NormalizeRecipe(snapshot) with { Version = recipe.Version + 1 };
+        await ValidateRecipeProductsAsync(accountId, next, ct);
         var result = await CommitAsync(accountId, idempotencyKey, WorkshopOperationType.RecipeUpdated, Now(),
             [], [recipeId], JsonSerializer.Serialize(next), ct);
         if (!result.Idempotent)
@@ -525,7 +530,8 @@ public sealed class WorkshopService(
             var updated = recipe with
             {
                 Name = next.Name, Caliber = next.Caliber, Oal = next.Oal, BulletWeight = next.BulletWeight,
-                BulletForm = next.BulletForm, Drawing = next.Drawing, Primer = next.Primer, Powder = next.Powder,
+                BulletForm = next.BulletForm, Primer = next.Primer, Powder = next.Powder,
+                PrimerProductId = next.PrimerProductId, PowderProductId = next.PowderProductId,
                 PowderWeight = next.PowderWeight, Notes = next.Notes, Version = next.Version, UpdatedAt = Now()
             };
             await repository.ReplaceAsync(DbCollections.WorkshopRecipes, updated, accountId, cancellationToken: ct);
@@ -834,7 +840,9 @@ public sealed class WorkshopService(
         var maintenance = await repository.ListAsync<MaintenanceEvent>(DbCollections.WorkshopMaintenanceEvents, accountId, ct);
         var operations = await repository.ListAsync<WorkshopOperation>(DbCollections.WorkshopOperations, accountId, ct);
         if (installations.Any(x => x.ComponentId == id) || maintenance.Any(x => x.ComponentId == id) ||
-            operations.Any(x => x.SourceEntityIds.Contains(id) || x.Deltas.Any(delta => delta.AggregateId == id)))
+            operations.Any(x => x.OperationType is not (WorkshopOperationType.ComponentPurchaseRecorded or
+                WorkshopOperationType.ComponentPurchaseCorrected) &&
+                (x.SourceEntityIds.Contains(id) || x.Deltas.Any(delta => delta.AggregateId == id))))
             throw new WorkshopConflictException("This component has history. Archive it instead.");
         if (current.Revision != revision || !await repository.DeleteAsync<ComponentInstance>(DbCollections.WorkshopComponentInstances, accountId, id, revision, ct))
             throw new WorkshopConflictException("Component changed. Reload before deleting it.");
@@ -845,11 +853,13 @@ public sealed class WorkshopService(
         RequireText(snapshot.Name, "Name", 160);
         RequireText(snapshot.Caliber, "Caliber", 80);
         snapshot = NormalizeRecipe(snapshot);
+        await ValidateRecipeProductsAsync(accountId, snapshot, ct);
         var recipe = new AmmoRecipe
         {
             Id = NewId(), AccountId = accountId, Name = snapshot.Name.Trim(), Caliber = snapshot.Caliber.Trim(),
             Oal = snapshot.Oal, BulletWeight = snapshot.BulletWeight, BulletForm = snapshot.BulletForm,
-            Drawing = snapshot.Drawing, Primer = snapshot.Primer, Powder = snapshot.Powder,
+            Primer = snapshot.Primer, Powder = snapshot.Powder,
+            PrimerProductId = snapshot.PrimerProductId, PowderProductId = snapshot.PowderProductId,
             PowderWeight = snapshot.PowderWeight, Notes = snapshot.Notes, UpdatedAt = Now(), CreationDateTime = Now()
         };
         await repository.AddAsync(DbCollections.WorkshopRecipes, recipe, ct);
@@ -936,48 +946,11 @@ public sealed class WorkshopService(
         return operation;
     }
 
-    public async Task<WorkshopOperationResult> RecordProductionAsync(string accountId, WorkshopProductionCommand command, CancellationToken ct = default)
+    public async Task<WorkshopOperationResult> RecordProductionAsync(
+        string accountId, WorkshopProductionCommand command, CancellationToken ct = default)
     {
-        if (command.Quantity <= 0) throw new WorkshopValidationException("Produced quantity must be positive.");
-        var recipe = await repository.GetAsync<AmmoRecipe>(DbCollections.WorkshopRecipes, accountId, command.RecipeId, ct)
-            ?? throw new WorkshopValidationException("Recipe was not found.");
-        if (recipe.Status != WorkshopRecipeStatus.Active)
-            throw new WorkshopValidationException("Recipe was not found.");
-        var snapshot = new RecipeSnapshot(recipe.Name, recipe.Caliber, recipe.Oal, recipe.BulletWeight, recipe.BulletForm,
-            recipe.Drawing, recipe.Primer, recipe.Powder, recipe.PowderWeight, recipe.Notes, recipe.Version);
-        var batchId = StableId(accountId, command.IdempotencyKey, "batch");
-        var sessionId = StableId(accountId, command.IdempotencyKey, "production-session");
-        var existingOperation = await repository.FindOperationAsync(accountId, command.IdempotencyKey, ct);
-        var productionDeltas = new[] { new WorkshopDelta(WorkshopAggregateKind.Batch, batchId, StockDelta: command.Quantity) };
-        var productionSourceIds = new[] { batchId, sessionId };
-        if (existingOperation is not null)
-        {
-            var expectedHash = PayloadHash(WorkshopOperationType.ProductionRecorded, productionDeltas,
-                productionSourceIds, JsonSerializer.Serialize(command), null);
-            if (existingOperation.PayloadHash != expectedHash)
-                throw new WorkshopConflictException("Idempotency key was already used for a different operation.");
-            return new(existingOperation, true);
-        }
-        var existingBatch = await repository.GetAsync<AmmoBatch>(DbCollections.WorkshopAmmoBatches, accountId, batchId, ct);
-        if (existingBatch is null)
-            await repository.AddAsync(DbCollections.WorkshopAmmoBatches, new AmmoBatch
-            {
-                Id = batchId, AccountId = accountId, RecipeId = recipe.Id, RecipeSnapshot = snapshot,
-                ProductionSessionId = sessionId, ProductionDate = command.ProductionDate,
-                ProducedQuantity = command.Quantity, OnHandQuantity = 0, Notes = Trim(command.Notes), CreationDateTime = Now()
-            }, ct);
-        var existingSession = await repository.GetAsync<ProductionSession>(
-            DbCollections.WorkshopProductionSessions, accountId, sessionId, ct);
-        if (existingSession is null)
-            await repository.AddAsync(DbCollections.WorkshopProductionSessions, new ProductionSession
-            {
-                Id = sessionId, AccountId = accountId, RecipeId = recipe.Id, RecipeSnapshot = snapshot,
-                ProductionDate = command.ProductionDate, QuantityProduced = command.Quantity, Notes = Trim(command.Notes),
-                BatchId = batchId, CreationDateTime = Now()
-            }, ct);
-        var result = await CommitAsync(accountId, command.IdempotencyKey, WorkshopOperationType.ProductionRecorded,
-            command.ProductionDate, productionDeltas, productionSourceIds, JsonSerializer.Serialize(command), ct);
-        return result;
+        var result = await RecordProductionWithSuppliesAsync(accountId, command, ct);
+        return new(result.Operation, result.Idempotent);
     }
 
     public async Task<WorkshopOperationResult> AllocateAsync(string accountId, WorkshopAllocationCommand command, CancellationToken ct = default)
@@ -1257,7 +1230,9 @@ public sealed class WorkshopService(
     private async Task<WorkshopOperationResult> CommitAsync(string accountId, string key, WorkshopOperationType type,
         DateTime effectiveAt, IReadOnlyList<WorkshopDelta> deltas, IReadOnlyList<string> sourceIds,
         string payloadIdentity, CancellationToken ct, string? originalOperationId = null,
-        string? clientRequestHash = null)
+        string? clientRequestHash = null, IReadOnlyList<WorkshopInventoryFact>? inventoryFacts = null,
+        RecipeSnapshot? productionSnapshot = null,
+        WorkshopProductionCorrectionFact? productionCorrection = null)
     {
         RequireText(key, "Idempotency key", 80);
         var hash = PayloadHash(type, deltas, sourceIds, payloadIdentity, originalOperationId);
@@ -1276,6 +1251,9 @@ public sealed class WorkshopService(
             Id = NewId(), AccountId = accountId, ClientIdempotencyKey = key, PayloadHash = hash,
             ClientRequestHash = clientRequestHash,
             OperationType = type, EffectiveAt = effectiveAt, RecordedAt = Now(), Deltas = deltas,
+            InventoryFacts = inventoryFacts ?? [],
+            ProductionSnapshot = productionSnapshot,
+            ProductionCorrection = productionCorrection,
             SourceEntityIds = sourceIds, OriginalOperationId = originalOperationId,
             ContributionDigest = WorkshopReplay.Digest(deltas), CreationDateTime = Now()
         };
@@ -1322,6 +1300,18 @@ public sealed class WorkshopService(
                             batch with { OnHandQuantity = value.Stock, Revision = batch.Revision + 1 },
                             accountId, batch.Revision, ct))
                         throw new WorkshopConflictException("The ammunition batch projection changed while applying the operation.");
+                    break;
+                case WorkshopAggregateKind.SupplyLot:
+                    var lot = await repository.GetAsync<WorkshopSupplyLot>(
+                        DbCollections.WorkshopSupplyLots, accountId, group.Key.AggregateId, ct);
+                    if (lot is not null && !await repository.ReplaceAsync(DbCollections.WorkshopSupplyLots,
+                            lot with
+                            {
+                                AvailableQuantity = value.Stock,
+                                Status = value.Stock == 0 ? WorkshopSupplyLotStatus.Empty : WorkshopSupplyLotStatus.Available,
+                                Revision = lot.Revision + 1
+                            }, accountId, lot.Revision, ct))
+                        throw new WorkshopConflictException("The supply lot projection changed while applying the operation.");
                     break;
                 case WorkshopAggregateKind.Allocation:
                     var allocation = await repository.GetAsync<AmmoAllocation>(DbCollections.WorkshopAmmoAllocations, accountId, group.Key.AggregateId, ct);

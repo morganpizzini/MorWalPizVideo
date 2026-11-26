@@ -133,6 +133,10 @@
         public const string WorkshopRecipeVersions = "workshopRecipeVersions";
         public const string WorkshopProductionSessions = "workshopProductionSessions";
         public const string WorkshopAmmoBatches = "workshopAmmoBatches";
+        public const string WorkshopSupplyProducts = "workshopSupplyProducts";
+        public const string WorkshopSupplyPurchases = "workshopSupplyPurchases";
+        public const string WorkshopSupplyLots = "workshopSupplyLots";
+        public const string WorkshopComponentPurchases = "workshopComponentPurchases";
         public const string WorkshopAmmoAllocations = "workshopAmmoAllocations";
         public const string WorkshopShootingSessions = "workshopShootingSessions";
         public const string WorkshopOperations = "workshopOperations";

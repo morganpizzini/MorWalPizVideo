@@ -22,9 +22,11 @@ Recorded implemented; production governance/browser/Mongo proof remains open:
   channel detail/access/moderation/article summaries were recorded delivered.
   DTOs omit email/credentials; additive stores are blogComments, blogReactions,
   and blogPortalAccess.
-- Feature-scoped create/verify at ServerAPI/BackOffice startup, mock skip and
-  fail-closed behavior supersede this feature's original manual-only index plan;
-  see [ADR-022](../architecture/adr/ADR-022-startup-blog-index-bootstrap.md).
+- BackOffice attempts the complete shared-platform index manifest at startup.
+  Index failures are logged but do not block either API's startup or traffic;
+  mock mode skips initialization. This policy supersedes the earlier
+  feature-scoped fail-closed behavior; see
+  [ADR-029](../architecture/adr/ADR-029-nonblocking-mongo-index-startup.md).
 
 Owners: Models/Domain blog-interaction boundaries, shared contracts/services,
 both API interaction controllers, BackOffice PublicAccountsController, public

@@ -1,7 +1,13 @@
 import { Link, useLoaderData, useNavigate, useOutletContext, useSearchParams } from "react-router";
 import { useState } from "react";
 import { PageTitle, EmptyState } from "@morwalpiz/layout";
-import type { WorkshopAnalytics, WorkshopAnalyticsBucket, WorkshopDashboard, WorkshopActivity } from "@morwalpizvideo/models";
+import type {
+  WorkshopAnalytics,
+  WorkshopAnalyticsBucket,
+  WorkshopDashboard,
+  WorkshopActivity,
+  WorkshopInventory,
+} from "@morwalpizvideo/models";
 import { ActivityList, DeferredRoute, Stat } from "../shared";
 import { ActivitySkeleton, MetricSkeleton, PanelSkeleton } from "../../components/loading/LoadingPrimitives";
 import type { DashboardLoaderData } from "./loader";
@@ -70,10 +76,80 @@ export default function Dashboard() {
           <Link className="quick-action" to="/integrity"><strong>{t("Check integrity")}</strong><span>{t("Review reconciliation status.")}</span></Link>
         </div>
       </section>
+      <DeferredRoute
+        data={data.inventory}
+        fallback={<section className="panel" aria-busy="true">{t("Loading inventory summary…")}</section>}
+        errorElement={<DashboardInventoryError />}
+      >
+        {(inventory) => <DashboardInventory inventory={inventory} />}
+      </DeferredRoute>
       <DeferredRoute data={Promise.all([data.dashboard, data.history, data.analytics]).then(([dashboard, history, analytics]) => ({ dashboard, history, analytics, days: data.days }))} fallback={<><MetricSkeleton count={4} /><PanelSkeleton /><section className="panel"><ActivitySkeleton rows={4} /></section></>}>
         {(resolved) => <DashboardContent data={resolved} />}
       </DeferredRoute>
     </div>
+  );
+}
+
+function DashboardInventoryError() {
+  const { t } = useI18n();
+  return (
+    <section className="panel" role="status">
+      <div className="section-heading">
+        <h2>{t("Inventory summary unavailable")}</h2>
+        <Link to="/inventory">{t("Open inventory")}</Link>
+      </div>
+      <p>{t("This online summary could not be refreshed. Other dashboard data is still available.")}</p>
+    </section>
+  );
+}
+
+function DashboardInventory({ inventory }: { inventory: WorkshopInventory | null }) {
+  const { culture, t } = useI18n();
+  if (!inventory) {
+    return (
+      <section className="panel">
+        <div className="section-heading">
+          <h2>{t("Online inventory")}</h2>
+          <Link to="/inventory">{t("Open inventory")}</Link>
+        </div>
+        <p>{t("Reconnect to see current supply stock and finance totals.")}</p>
+      </section>
+    );
+  }
+  const products = new Map(inventory.products.map((product) => [product.id, product]));
+  const availableUnits = (type: "Primer" | "Bullet") =>
+    inventory.lots.reduce((total, lot) =>
+      lot.isEmpty || products.get(lot.productId)?.type !== type
+        ? total
+        : total + lot.availableQuantity,
+    0);
+  const openLots = inventory.lots.filter((lot) => !lot.isEmpty && lot.availableQuantity > 0).length;
+
+  return (
+    <section className="panel dashboard-inventory">
+      <div className="section-heading">
+        <h2>{t("Online inventory")}</h2>
+        <Link to="/inventory">{t("Open inventory")}</Link>
+      </div>
+      <p>{t("{products} products · {lots} available lots", {
+        products: formatNumber(inventory.products.filter((product) => !product.archived).length, culture),
+        lots: formatNumber(openLots, culture),
+      })}</p>
+      <div className="dashboard-inventory-units">
+        <span>{t("Primer units available")} <strong>{formatNumber(availableUnits("Primer"), culture)}</strong></span>
+        <span>{t("Bullet units available")} <strong>{formatNumber(availableUnits("Bullet"), culture)}</strong></span>
+      </div>
+      {inventory.spending.length > 0 && (
+        <ul className="inventory-currency-list">
+          {inventory.spending.map((entry) => (
+            <li key={entry.currency}>
+              <span>{t("Recorded purchases")} · {entry.currency}</span>
+              <strong>{formatNumber(entry.total, culture)} {entry.currency}</strong>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }
 

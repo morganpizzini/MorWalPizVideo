@@ -11,7 +11,7 @@ Architecture Decision Records live in `docs/architecture/adr`. Accepted ADRs gov
 | [ADR-005](adr/ADR-005-permanent-free-artifacts.md) | Permanent-free artifacts and anonymous acquisitions | Accepted |
 | [ADR-006](adr/ADR-006-blob-exposure.md) | Public previews and private originals | Accepted |
 | [ADR-007](adr/ADR-007-development-scenarios.md) | Deterministic scenario-based local development | Accepted |
-| [ADR-008](adr/ADR-008-mongo-index-migrations.md) | Source-owned Mongo index and migration operations | Accepted |
+| [ADR-008](adr/ADR-008-mongo-index-migrations.md) | Source-owned Mongo index and migration operations | Superseded for startup creation by ADR-029; operator migration and removal safeguards remain |
 | [ADR-009](adr/ADR-009-cache-invalidation.md) | Authenticated tag-based cache invalidation | Accepted |
 | [ADR-010](adr/ADR-010-domain-and-cors.md) | Canonical domains and least-privilege CORS | Accepted |
 | [ADR-011](adr/ADR-011-email-boundary.md) | Provider-neutral future transactional email boundary | Accepted |
@@ -23,11 +23,13 @@ Architecture Decision Records live in `docs/architecture/adr`. Accepted ADRs gov
 | [ADR-017](adr/ADR-017-anonymous-web-push.md) | Anonymous per-channel Web Push with snapshot fanout | Accepted |
 | [ADR-020](adr/ADR-020-backoffice-ai-prompt-orchestration.md) | BackOffice Chat prompts, typed model gateway, evaluation, and human-controlled canaries | Accepted for pilot; rollout gated |
 | [ADR-021](adr/ADR-021-video-importer-channel-settings.md) | BackOffice-authoritative VideoImporter channel settings with a recoverable SQLite cache | Accepted |
-| [ADR-022](adr/ADR-022-startup-blog-index-bootstrap.md) | Startup bootstrap for the narrowly scoped blog-interaction indexes | Accepted; supersedes ADR-008 only for those indexes |
+| [ADR-022](adr/ADR-022-startup-blog-index-bootstrap.md) | Startup bootstrap for the narrowly scoped blog-interaction indexes | Superseded by ADR-029 |
 | [ADR-023](adr/ADR-023-container-image-staging.md) | Stage container images in ACR while Azure Web App deployment remains skipped | Accepted; partially superseded by ADR-024 |
 | [ADR-024](adr/ADR-024-dual-api-deployment-staging.md) | Retain package deployments for BackOffice API, ServerAPI, and ShortLinks during image staging | Accepted; supersedes ADR-023 for these three APIs |
 | [ADR-026](adr/ADR-026-stable-channel-identity-and-youtube-binding.md) | Keep channel tenancy stable while allowing its external YouTube binding to change | Accepted |
 | [ADR-027](adr/ADR-027-shooter-workshop-immutable-ledger-reconciliation.md) | Use an immutable Workshop operation ledger with independently rebuildable projections and reconciliation | Accepted for the Workshop delivery baseline |
+| [ADR-028](adr/ADR-028-startup-reader-indexes.md) | Startup bootstrap for active-reader indexes | Superseded by ADR-029 |
+| [ADR-029](adr/ADR-029-nonblocking-mongo-index-startup.md) | BackOffice attempts all shared-platform indexes at startup without blocking application availability | Accepted |
 
 ## ADR Process
 

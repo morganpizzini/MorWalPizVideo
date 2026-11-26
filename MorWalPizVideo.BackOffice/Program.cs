@@ -554,9 +554,7 @@ else
     builder.Services.AddScoped<IMongoDbService, MongoDbService>();
     builder.Services.AddScoped<IMongoDatabase>(provider =>
         provider.GetRequiredService<IMongoDbService>().GetDatabase());
-    builder.Services.AddHostedService<BlogInteractionMongoIndexStartupService>();
-    builder.Services.AddHostedService<FeedbackMongoIndexStartupService>();
-    builder.Services.AddHostedService<YouTubeContentMongoIndexStartupService>();
+    builder.Services.AddHostedService<MongoIndexStartupService>();
 
     builder.Services.AddScoped<IYouTubeContentRepository, YouTubeContentRepository>();
     builder.Services.AddScoped<IPublicAccountRepository, PublicAccountRepository>();

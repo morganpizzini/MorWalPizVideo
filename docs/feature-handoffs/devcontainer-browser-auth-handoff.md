@@ -6,35 +6,43 @@ Make a rebuilt VS Code Dev Container capable of launching the repository's
 version-matched headless Chromium and capturing an authenticated local Workshop
 page. Preserve normal authentication; do not make protected pages anonymous.
 
-Assumption: the selected Shooter Workshop is the first target. The quoted
-earlier screenshot failure does not identify its application or establish a
-Playwright installation failure. Other applications require their own login
-and data setup.
+The selected target is Shooter Workshop. Other applications require their own
+login and data setup.
 
 Completion stops after the container prerequisites, Workshop local access,
 focused browser proof, and directly related documentation are in place. A
 repository-wide browser test framework, production authentication changes, and
 other applications' fixture workflows require separate approval.
 
-## Current Evidence
+## Delivered
 
-- `.devcontainer/devcontainer.json` uses the .NET 10 Bookworm image, Node 22,
-  Yarn Classic, the `vscode` user, and a frozen workspace install. It does not
-  install browser dependencies or forward Workshop ports.
+- `.devcontainer/devcontainer.json` now uses the published .NET 11 Dev
+  Container image, retains Node 22, Yarn Classic, `vscode`, and existing port
+  forwards, and adds Workshop ports 5179 and 5180.
+- `.devcontainer/post-create.sh` runs the frozen workspace install, installs
+  Linux dependencies for lockfile-resolved Playwright Chromium, then installs
+  that browser for the non-root user and generates the local ASP.NET Core
+  HTTPS development certificate. Provisioning stops visibly on errors.
+- `frontend/shooter-workshop.client/viteServerConfig.ts` now selects the
+  standalone port/API defaults or parses AppHost `PORT` and `ASPNETCORE_URLS`.
+  Wildcard listeners are converted to loopback targets for the local Vite
+  proxy. `vite.config.ts` binds for container port-forwarding and keeps `/api`
+  same-origin, preserving cookie and CSRF behavior.
+- `frontend/shooter-workshop.client` owns `@playwright/test` and provides
+  `test:browser`, with a local-only, mock-confirmed test that checks anonymous
+  API denial, registers a unique disposable user through the UI, signs in,
+  creates a firearm, opens the authenticated detail page, verifies the
+  HttpOnly cookie and same-origin API responses, and saves a screenshot under
+  `/tmp` by default. It does not save browser authentication state.
+- `docs/architecture/development.md` and `docs/architecture/testing.md` now
+  describe the container setup, local mock-backed startup, and browser test.
+
+## Evidence
+
 - `MorWalPizVideo.ServerAPI/MorWalPizVideo.ServerAPI.csproj` and
   `MorWalPizVideo.AppHost/MorWalPizVideo.AppHost.csproj` target .NET 11.
-- `frontend/back-office-spa/package.json` already declares `@playwright/test`;
-  `frontend/yarn.lock` resolves it to 1.65.1. The Workshop workspace does not
-  declare Playwright, and no Playwright configuration was found in the
-  frontend. The existing Yarn lockfile, not the duplicate npm lockfile, owns
-  the container's current install.
-- `frontend/shooter-workshop.client/vite.config.ts` defaults to port 5180 and
-  proxies `/api` to HTTPS localhost port 7140. ServerAPI's
-  `Properties/launchSettings.json` instead declares HTTPS port 7225. The
-  AppHost declares Workshop port 5179 and supplies an API endpoint as an
-  environment variable, but the current Workshop Vite configuration does not
-  read that variable or the declared port. Verify actual effective listeners;
-  neither wiring should be assumed to work without adjustment.
+- `frontend/yarn.lock` resolves Playwright to 1.65.1. The container setup uses
+  that workspace binary for both operating-system dependencies and Chromium.
 - Workshop's `src/auth/AuthProvider.tsx`, `src/routes/AccountLogin/component.tsx`,
   and shared `frontend/fe-packages/services/src/publicAccountService.ts` use
   the real PublicAccount session flow and a CSRF token. Registration creates a
@@ -47,37 +55,33 @@ other applications' fixture workflows require separate approval.
 - ServerAPI's `Program.cs` selects mock account and Workshop repositories
   when its mock flag is enabled and rejects that mode outside Development or
   Test. Mock state is process-local; a restart requires fresh data and login.
-- `frontend/shooter-workshop.client/src/routes/FirearmDetail/loader.ts` loads
-  detail by account-owned ID. A new account needs a corresponding firearm to
-  reach a populated detail page.
+- `MorWalPizVideo.Domain/Scenarios/PrimaryScenario.cs` now initializes each
+  account-owned Workshop collection for the existing mock repository.
+- `MorWalPizVideo.ServerAPI/appsettings.Development.json` enables `EnableMock`;
+  the browser test still requires an explicit `WORKSHOP_LOCAL_MOCK_API=1`
+  acknowledgment and local base URL before it runs.
+- The first browser run found that `PrimaryScenario` did not initialize any
+  Workshop collections, so authenticated mock API reads failed. The scenario
+  now initializes all Workshop collections as empty and
+  `MockScenarioLifecycleTests` verifies each collection can be read.
 
-## Proposed Design
+## Implemented Design
 
-1. Use a .NET 11-compatible Dev Container base verified to support the target
-   host architecture, retaining Node 22, Yarn Classic, current development
-   environment, forwarded ports, and the non-root `vscode` user. Do not assume
-   an unverified image tag exists; select a published suitable image during
-   implementation.
-2. Install the Linux libraries required by the **lockfile-resolved Playwright
-   version**, then install its Chromium/headless browser under a cache readable
-   by `vscode`. Use the existing workspace's Playwright dependency, rather than
-   an independently versioned global install. Ensure provisioning fails
-   visibly if dependency or browser installation fails, and is repeatable on
-   rebuild. Keep the existing frozen Yarn installation.
-3. Forward the Workshop standalone and AppHost ports, and align its Vite
-   proxy and port with the selected ServerAPI and AppHost endpoints. Preserve
-   standalone defaults and honor the AppHost-provided endpoint and port; test
-   both paths. Use the same-origin `/api` proxy so the browser receives its
-   normal cookie and CSRF behavior. Avoid public-facing port bindings and
-   broad CORS changes.
-4. Run ServerAPI in Development with its existing mock flag, then use the
+1. The Dev Container uses the published `mcr.microsoft.com/devcontainers/dotnet:3-11.0`
+   image. The lockfile-resolved Playwright CLI installs operating-system
+   dependencies with elevated privileges and downloads Chromium into the
+   `vscode` user's browser cache. `dotnet dev-certs https` creates the local
+   HTTPS certificate needed by the existing ServerAPI launch profile.
+2. The Workshop Vite server defaults to port 5180 and the ServerAPI HTTPS
+   listener on port 7225. In AppHost it honors port 5179 and the API URL
+   injected through `ASPNETCORE_URLS`. The same-origin `/api` proxy preserves
+   the real cookie/CSRF flow.
+3. Run ServerAPI in Development with its existing mock flag, then use the
    normal Workshop registration and login UI with a disposable test identity.
-   Create a firearm through the normal UI, open its detail, wait for the real
-   data, and capture a screenshot. Do not commit credentials, session state,
-   tokens, or real user data. Browser session state is a secret and should
-   normally remain in memory; if a file is necessary, keep it outside the
-   repository with restrictive permissions and delete it after use.
-5. Treat browser tooling and Chromium as separate prerequisites. A successful
+   The Playwright test creates a firearm in the UI, opens its detail, verifies
+   the protected API response and captures a screenshot. It uses no committed
+   credentials or persisted browser state.
+4. Treat browser tooling and Chromium as separate prerequisites. A successful
    direct Playwright smoke check does not prove that the selected Copilot or
    Impeccable agent has a browser tool. Check its actual tool availability
    and execution location in the reopened container; configure an appropriate
@@ -104,20 +108,33 @@ smallest necessary additions.
 - Other frontends, backend projects, Windows-only applications, and deployed
   services: no planned behavioral changes.
 
-## Impacted Files
+## Changed Files
 
-### Modify
+### Modified
 
-- `.devcontainer/devcontainer.json`: supported SDK base, browser provisioning
-  integration, and Workshop ports; retain existing settings.
-- `frontend/shooter-workshop.client/vite.config.ts`: use supplied local
-  endpoint and port while retaining safe standalone defaults.
+- `.devcontainer/devcontainer.json`: .NET 11 base, post-create setup, and
+  Workshop ports.
+- `.devcontainer/post-create.sh`: frozen dependency install, Chromium system
+  library setup, version-matched browser install, and HTTPS dev certificate.
+- `frontend/shooter-workshop.client/vite.config.ts` and
+  `viteServerConfig.ts`: standalone/AppHost port and API URL support.
+- `MorWalPizVideo.Domain/Scenarios/PrimaryScenario.cs`: initialize empty
+  Workshop mock collections so local account-scoped reads and writes work.
+- `frontend/shooter-workshop.client/package.json`: workspace-owned Playwright
+  dependency and browser-test command.
+- `MorWalPizVideo.BackOffice.Tests/Features/MockScenarioLifecycleTests.cs`:
+  regression coverage for all Workshop collections in the primary scenario.
+- `docs/architecture/development.md` and `docs/architecture/testing.md`:
+  local setup and test instructions.
+- This handoff: delivered implementation and validation record.
 
-### Add
+### Added
 
-- A `.devcontainer`-owned provisioning artifact only if needed to install
-  system browser libraries and the matching browser reproducibly. Keep OS
-  package installation separate from the `vscode` user's browser cache.
+- `frontend/shooter-workshop.client/viteServerConfig.ts` and
+  `src/viteServerConfig.test.ts`: validated Vite settings and focused cases.
+- `frontend/shooter-workshop.client/playwright.config.ts` and
+  `e2e/authenticated-firearm.spec.ts`: local-only authenticated screenshot
+  flow.
 
 ### Generated/Migration
 
@@ -131,10 +148,11 @@ None. No database or production migration.
 - This handoff: record actual files, results, and remaining blockers after
   implementation.
 
-### Verify Only
+### Existing Paths Reused
 
 - `frontend/package.json`, `frontend/yarn.lock`, and
-  `frontend/back-office-spa/package.json`: workspace and browser version.
+  `frontend/back-office-spa/package.json`: workspace and resolved browser
+  version.
 - `MorWalPizVideo.AppHost/Program.cs` and
   `MorWalPizVideo.ServerAPI/Properties/launchSettings.json`: endpoint wiring.
 - `frontend/shooter-workshop.client/src/auth/AuthProvider.tsx`,
@@ -179,14 +197,11 @@ cookie.
   secrets or expose browser control endpoints. Verify no credential-bearing
   artifacts enter the repository.
 - **High — false security proof:** fake default auth does not authenticate
-  PublicAccount endpoints. Verify unauthenticated access is denied and the
-  real login cookie grants only the test account's data.
-- **Medium — endpoint mismatch:** AppHost, Vite, and ServerAPI currently
-  declare inconsistent ports. Verify effective listeners, same-origin
-  requests, and both standalone and AppHost modes.
-- **Medium — browser mismatch:** package, browser cache, Linux libraries,
-  architecture, and user permissions can disagree. Rebuild and launch the
-  exact installed version as `vscode`.
+  PublicAccount endpoints. The browser test verifies anonymous denial and
+  access to the signed-in test account's detail, not every cross-account
+  authorization case.
+- **Medium — AppHost mode:** standalone API/UI browser flow passed and the
+  AppHost Vite settings are unit-tested; AppHost itself was not run end to end.
 - **Medium — unavailable agent integration:** installing Chromium does not
   guarantee a browser tool exists in a particular chat agent. Verify the
   actual tool in the remote container and report a separate blocker.
@@ -195,49 +210,37 @@ cookie.
 
 ## Technical Debt
 
-- The .NET 10 container image lags the projects' .NET 11 targets: address now
-  because local ServerAPI execution is required.
-- Workshop's AppHost and Vite endpoint settings diverge: address only the
-  local wiring needed for this outcome.
 - Historical duplicate lockfiles and broader browser test coverage are
   unrelated; defer.
 
-## Implementation Roadmap
+## Implementation and Validation
 
-1. Verify a published .NET 11-compatible image and target architecture; update
-   container configuration without discarding existing development features.
-2. After frozen workspace installation, provision version-matched Playwright
-   Chromium and its Linux dependencies; ensure the non-root user can launch it.
-   Rebuild the container and verify SDK, Node, Yarn, and browser launch.
-3. Align Workshop Vite's port and proxy with AppHost configuration and preserve
-   standalone behavior. Forward the two Workshop ports. Verify the browser
-   reaches the intended local ServerAPI in both modes.
-4. Start isolated mock-backed ServerAPI and Workshop; register a disposable
-   account, log in, create account-owned detail data, and capture the requested
-   page. Verify anonymous denial and authenticated data isolation.
-5. Verify the selected chat agent can access a browser in the container; if it
-   cannot, report the missing integration independently of the direct
-   Playwright result.
-6. Update development and testing documentation and this handoff with actual
-   outcomes. An independent review is appropriate if container provisioning or
-   authorization behavior changes beyond local wiring; the user decides.
-
-## Testing Strategy
-
-- Container: clean rebuild, frozen dependency installation, correct .NET SDK,
-  browser dependency resolution, non-root headless launch and screenshot.
-- Workshop: standalone and AppHost listener/proxy checks, real registration,
-  login, session restore, populated detail and logout.
-- Security: anonymous detail denied, invalid login rejected, account A cannot
-  read account B's record, CSRF remains required, no secrets in artifacts.
-- Negative cases: unavailable API, missing browser executable or library,
-  expired session, mock server restart, absent record, and absent agent browser
-  tool must produce visible failure rather than a success-shaped screenshot.
-- Responsive/accessibility: capture desktop and narrow viewport evidence for
-  the same populated page and check basic keyboard navigation. This verifies
-  access, not an interface redesign or full accessibility audit.
-- Existing focused Workshop tests and build: run where the Vite configuration
-  changes; no full-suite expansion unless focused results require it.
+- Published image tag and amd64/arm64 manifest verified; `.devcontainer`
+  JSON and post-create shell syntax passed.
+- Frozen Yarn workspace contains Playwright 1.65.1; direct CLI reports
+  version 1.65.1.
+- Focused Vite settings tests: 4 passed.
+- Shooter Workshop unit tests: 76 passed.
+- Shooter Workshop production build: passed.
+- Playwright test discovery: 1 test found.
+- Focused TypeScript check for Vite and Playwright files: passed.
+- ServerAPI/Domain test build passed; focused `MockScenarioLifecycleTests`:
+  5 passed.
+- Scoped `git diff --check`: passed.
+- The first clean container provisioning attempt exposed that `sudo` filters
+  Node from `PATH`; preserving `PATH` for the privileged dependency installer
+  fixed it. Clean container provisioning then passed and installed Playwright
+  1.65.1 Chromium plus its Linux dependencies.
+- API startup initially exposed a missing ASP.NET HTTPS development
+  certificate. `dotnet dev-certs https` generated one successfully, and the
+  API then started with its existing HTTPS launch profile.
+- Authenticated Playwright flow passed end to end in the container (1/1):
+  anonymous API request returned 401; disposable registration, UI login,
+  HttpOnly session cookie, firearm creation and same-origin detail read
+  succeeded. Screenshot `/tmp/workshop-authenticated-firearm.png` was
+  generated (134,485 bytes).
+- The selected Copilot/Impeccable browser-tool availability remains
+  unverified; Playwright success alone does not provide that tool.
 
 ## Migration And Rollback
 
@@ -250,9 +253,6 @@ privileged container execution as a workaround.
 
 ## Open Questions
 
-- Is Shooter Workshop the intended screenshot target, or was the quoted detail
-  page in another application? That changes the authentication and fixture
-  path.
 - Which browser integration is enabled for the user's Copilot/Impeccable
   session after reopening the container? It must be verified, not inferred from
   the installed browser.

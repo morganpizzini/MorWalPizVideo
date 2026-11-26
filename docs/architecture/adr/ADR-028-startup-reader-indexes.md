@@ -1,6 +1,6 @@
 # ADR-028: Startup Bootstrap For Active Reader Indexes
 
-- **Status:** Accepted
+- **Status:** Superseded by [ADR-029](ADR-029-nonblocking-mongo-index-startup.md)
 - **Date:** 2026-11-18
 
 ## Context
@@ -68,3 +68,9 @@ otherwise unchanged.
 On rollback, retain any created index and backfilled compatibility values.
 Restore the previous reader only after validating output-cache state; do not
 drop indexes or reverse data changes automatically.
+
+## Supersession
+
+ADR-029 includes these shared-platform indexes in BackOffice's complete
+non-blocking startup attempt and removes the ServerAPI startup creator. Index
+failure no longer gates application startup or readiness.

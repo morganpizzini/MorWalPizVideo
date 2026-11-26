@@ -1,5 +1,7 @@
 using MorWalPiz.Contracts.Contracts;
+using MorWalPizVideo.BackOffice.Services;
 using MorWalPizVideo.Domain;
+using MorWalPizVideo.Models.Constraints;
 using MorWalPizVideo.Server.Models;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
@@ -14,14 +16,36 @@ public sealed class BlogServiceTests
     [Fact]
     public void Blog_list_indexes_and_sort_match_channel_and_timestamp_ordering()
     {
-        Assert.Equal("blog_channel_publishedat_id", BlogRepository.ListIndexName);
+        var index = MongoIndexOperationsService.Manifest
+            .Single(candidate => candidate.Key == "blog.channel_publishedat_id");
+
+        Assert.Equal("blog_channel_publishedat_id", index.Name);
+        Assert.Equal(DbCollections.BlogPosts, index.Collection);
         Assert.Equal(new BsonDocument
         {
             { "channelId", 1 },
             { "publishedAt", -1 },
             { "_id", 1 }
-        }, BlogRepository.ListIndexKeys);
+        }, index.Keys);
         Assert.Equal(new BsonDocument { { "publishedAt", -1 } }, BlogRepository.ListSortKeys);
+    }
+
+    [Fact]
+    public void Blog_indexes_are_in_the_central_startup_manifest()
+    {
+        var uniqueIndex = MongoIndexOperationsService.Manifest
+            .Single(index => index.Key == "blog.channel_slug.unique");
+        var listIndex = MongoIndexOperationsService.Manifest
+            .Single(index => index.Key == "blog.channel_publishedat_id");
+
+        Assert.Equal("blog_channel_slug_unique", uniqueIndex.Name);
+        Assert.Equal("blogPosts", uniqueIndex.Collection);
+        Assert.Equal(new BsonDocument { { "channelId", 1 }, { "slug", 1 } }, uniqueIndex.Keys);
+        Assert.True(uniqueIndex.Unique);
+
+        Assert.Equal("blog_channel_publishedat_id", listIndex.Name);
+        Assert.Equal(DbCollections.BlogPosts, listIndex.Collection);
+        Assert.False(listIndex.Unique);
     }
 
     [Fact]

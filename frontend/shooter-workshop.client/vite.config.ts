@@ -1,6 +1,9 @@
 import { fileURLToPath, URL } from "node:url";
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
+import { getWorkshopViteServerSettings } from "./viteServerConfig";
+
+const serverSettings = getWorkshopViteServerSettings(process.env);
 
 export default defineConfig({
   plugins: [react()],
@@ -18,7 +21,10 @@ export default defineConfig({
     },
   },
   server: {
-    port: 5180,
-    proxy: { "^/api": { target: "https://localhost:7140", secure: false } },
+    host: "0.0.0.0",
+    port: serverSettings.port,
+    strictPort: true,
+    // Keep account cookies and CSRF requests same-origin in the browser.
+    proxy: { "^/api": { target: serverSettings.apiTarget, secure: false } },
   },
 });

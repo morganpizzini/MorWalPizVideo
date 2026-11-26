@@ -29,10 +29,12 @@ before an apply operation.
    `channelId` values.
 2. Resolve duplicates through a reviewed recovery decision; do not delete or
    overwrite documents automatically.
-3. Use the approved manual Mongo index audit/apply operation with the exact
-   current allowlist key. Startup does not create this unique index.
-4. Audit again and confirm `ux_videoimportersettings_channelid` is unique on
-   `{ "channelId": 1 }`.
+3. BackOffice attempts the unique index at startup. Inspect the initialization
+   logs and authenticated audit result; this is not a startup or deployment
+   gate. If creation fails, use the approved manual audit/apply operation after
+   resolving duplicate `channelId` values.
+4. Confirm `ux_videoimportersettings_channelid` is unique on `{ "channelId": 1 }`
+   before treating the uniqueness constraint as active.
 5. Record sanitized request/result evidence, environment, date, and operator
    approval in the appropriate environment evidence bundle. Source artifacts
    are not proof that a live index exists.

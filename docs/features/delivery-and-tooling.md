@@ -74,6 +74,38 @@ type-check source-owned tests. Focused component tests and the application build
 passed; the local environment had no Docker daemon, so the existing hosted
 container gate remains the image-level proof.
 
+## Dev Container browser and Workshop authentication
+
+The development container now uses the .NET 11 Dev Container image and installs
+the frontend's frozen Yarn workspace, Playwright's matching Chromium system
+dependencies, Chromium itself, and an ASP.NET Core HTTPS development
+certificate. Ports 5179 (AppHost) and 5180 (standalone) are forwarded.
+`frontend/shooter-workshop.client/viteServerConfig.ts` honors AppHost's `PORT`
+and `ASPNETCORE_URLS`, while retaining local defaults and a same-origin `/api`
+proxy.
+
+The opt-in Workshop `test:browser` flow requires an explicit local-mock
+acknowledgment and loopback base URL. It verifies anonymous API denial, creates
+a disposable account through registration/login, creates a firearm, opens its
+authenticated detail route, and writes a screenshot under `/tmp`. It preserves
+PublicAccount HttpOnly-cookie and CSRF behavior; no credential or browser
+storage state is committed. Primary mock scenarios now initialize empty
+Workshop collections, allowing authenticated local Workshop requests without
+MongoDB; a regression test covers every collection.
+
+Focused Vite configuration tests (4), Workshop unit tests (76), production
+build, Playwright discovery (1 test), focused TypeScript checks, and mock
+scenario regression tests (5) passed. A clean Dev Container provision installed
+Playwright 1.65.1 Chromium and its Linux dependencies. After generating the
+local HTTPS certificate, the authenticated browser flow passed end to end and
+wrote `/tmp/workshop-authenticated-firearm.png`. Chromium installation does
+not itself make a Copilot or Impeccable browser integration available; that
+remains a separate remote-session check.
+
+See the [runbook](../architecture/testing.md#shooter-workshop-browser-test)
+and [implementation handoff](../feature-handoffs/devcontainer-browser-auth-handoff.md)
+for the exact commands and residual integration limitation.
+
 ## Public-client BuildKit cache
 
 Recorded Dockerfile/workflow implementation, not image/performance qualification:

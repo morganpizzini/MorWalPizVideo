@@ -1,4 +1,6 @@
 using System.Reflection;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Routing;
 using MongoDB.Bson;
@@ -291,16 +293,94 @@ public sealed class MongoIndexOperationsTests
         Assert.Same(service.RemovalResults, response.Value);
     }
 
+    [Fact]
+    public async Task Startup_attempts_all_manifest_indexes_after_an_individual_apply_failure()
+    {
+        var service = new RecordingMongoIndexOperationsService
+        {
+            FailingApplyKey = MongoIndexOperationsService.Manifest[0].Key
+        };
+        using var provider = new ServiceCollection()
+            .AddSingleton<IMongoIndexOperationsService>(service)
+            .BuildServiceProvider();
+        var startup = new MongoIndexStartupService(
+            provider.GetRequiredService<IServiceScopeFactory>(),
+            NullLogger<MongoIndexStartupService>.Instance);
+
+        await startup.StartAsync(CancellationToken.None);
+        await service.AllIndexesAudited.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await startup.StopAsync(CancellationToken.None);
+
+        Assert.Equal(
+            MongoIndexOperationsService.Manifest.Select(index => index.Key),
+            service.AppliedKeys);
+        Assert.Equal(
+            MongoIndexOperationsService.Manifest.Select(index => index.Key),
+            service.AuditedKeys);
+    }
+
+    [Fact]
+    public async Task Startup_returns_without_waiting_for_index_operations()
+    {
+        var service = new RecordingMongoIndexOperationsService { BlockApply = true };
+        using var provider = new ServiceCollection()
+            .AddSingleton<IMongoIndexOperationsService>(service)
+            .BuildServiceProvider();
+        var startup = new MongoIndexStartupService(
+            provider.GetRequiredService<IServiceScopeFactory>(),
+            NullLogger<MongoIndexStartupService>.Instance);
+
+        await startup.StartAsync(CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(2));
+        await service.ApplyStarted.Task.WaitAsync(TimeSpan.FromSeconds(2));
+        await startup.StopAsync(CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(2));
+    }
+
     private sealed class RecordingMongoIndexOperationsService : IMongoIndexOperationsService
     {
         public IList<string> RemovalKeys { get; private set; } = [];
         public IList<MongoIndexRemovalResult> RemovalResults { get; set; } = [];
+        public List<string> AppliedKeys { get; } = [];
+        public List<string> AuditedKeys { get; } = [];
+        public string? FailingApplyKey { get; set; }
+        public bool BlockApply { get; set; }
+        public TaskCompletionSource ApplyStarted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource AllIndexesAudited { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        public Task<IList<MongoIndexAuditItem>> AuditAsync(IList<string>? keys = null, CancellationToken cancellationToken = default) =>
-            Task.FromResult<IList<MongoIndexAuditItem>>([]);
+        public Task<IList<MongoIndexAuditItem>> AuditAsync(IList<string>? keys = null, CancellationToken cancellationToken = default)
+        {
+            if (keys is not null)
+                AuditedKeys.AddRange(keys);
+            if (AuditedKeys.Count == MongoIndexOperationsService.Manifest.Count)
+                AllIndexesAudited.TrySetResult();
 
-        public Task<IList<MongoIndexApplyResult>> ApplyAsync(IList<string> approvedKeys, CancellationToken cancellationToken = default) =>
-            Task.FromResult<IList<MongoIndexApplyResult>>([]);
+            var results = keys?.Select(key =>
+            {
+                var entry = MongoIndexOperationsService.Manifest.Single(index => index.Key == key);
+                return new MongoIndexAuditItem(
+                    entry.Key,
+                    entry.Collection,
+                    entry.Name,
+                    Exists: entry.Key != FailingApplyKey,
+                    entry.Keys.ToJson());
+            }).ToList() ?? [];
+            return Task.FromResult<IList<MongoIndexAuditItem>>(results);
+        }
+
+        public async Task<IList<MongoIndexApplyResult>> ApplyAsync(IList<string> approvedKeys, CancellationToken cancellationToken = default)
+        {
+            AppliedKeys.AddRange(approvedKeys);
+            ApplyStarted.TrySetResult();
+            if (BlockApply)
+                await Task.Delay(Timeout.Infinite, cancellationToken);
+            if (approvedKeys.Contains(FailingApplyKey, StringComparer.Ordinal))
+                throw new InvalidOperationException("Simulated index creation failure.");
+
+            return approvedKeys.Select(key =>
+            {
+                var entry = MongoIndexOperationsService.Manifest.Single(index => index.Key == key);
+                return new MongoIndexApplyResult(entry.Key, entry.Collection, entry.Name, "created");
+            }).ToList();
+        }
 
         public Task<IList<MongoIndexRemovalResult>> RemoveAsync(IList<string> approvedRemovalKeys, CancellationToken cancellationToken = default)
         {

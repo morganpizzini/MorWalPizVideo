@@ -1,43 +1,14 @@
-import { recordWorkshopProduction } from "@morwalpizvideo/services";
 import type { ActionFunctionArgs } from "react-router";
 import { action as recipesAction } from "../Recipes/action";
-
-const text = (form: FormData, key: string) => {
-  const value = form.get(key);
-  return typeof value === "string" ? value.trim() : "";
-};
+import { submitProduction } from "../submitProduction";
 
 export async function action(args: ActionFunctionArgs) {
   const { request } = args;
   const actionRequest = request.clone();
   const actionForm = await actionRequest.formData();
-  const intent = text(actionForm, "intent");
+  const intent = actionForm.get("intent");
   if (intent === "create" || intent === "update") {
     return recipesAction(args);
   }
-  const form = await request.formData();
-  const recipeId = text(form, "recipeId");
-  const productionDate = text(form, "productionDate");
-  const quantityProduced = Number(text(form, "quantityProduced"));
-  const notes = text(form, "notes");
-
-  if (!recipeId || !productionDate || !Number.isInteger(quantityProduced) || quantityProduced < 1) {
-    return { ok: false as const, error: "Please review the form." };
-  }
-
-  try {
-    await recordWorkshopProduction({
-      recipeId,
-      productionDate,
-      quantityProduced,
-      notes: notes || null,
-      idempotencyKey: crypto.randomUUID(),
-    });
-    return { ok: true as const };
-  } catch (error) {
-    return {
-      ok: false as const,
-      error: error instanceof Error ? error.message : "The request could not be completed.",
-    };
-  }
+  return submitProduction(actionForm);
 }

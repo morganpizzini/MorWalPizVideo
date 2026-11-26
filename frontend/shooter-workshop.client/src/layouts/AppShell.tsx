@@ -15,7 +15,8 @@ import type { action as offlineAction } from "../routes/offlineAction";
 
 const navigation = [
   ["Dashboard", "/"], ["Equipment", "/firearms"],
-  ["Ammunition", "/ammunition"], ["Recordings", "/sessions/shooting"], ["History", "/history"],
+  ["Ammunition", "/ammunition"], ["Inventory", "/inventory"],
+  ["Recordings", "/sessions/shooting"], ["History", "/history"],
 ] as const;
 
 type HeaderIcon = "globe" | "download" | "logout";

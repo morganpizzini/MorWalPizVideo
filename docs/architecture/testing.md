@@ -197,6 +197,40 @@ define a test script and are not active entries in the central test matrix.
 `frontend/TelePrompter` and `frontend/stage-designer` are outside the
 architecture guide's active test scope.
 
+### Shooter Workshop browser test
+
+The Workshop workspace has an opt-in Playwright test for the local browser
+flow. It verifies anonymous API denial, creates a disposable account through
+the public registration and login screens, records a firearm, opens its
+account-protected detail route, and writes a screenshot to
+`/tmp/workshop-authenticated-firearm.png` by default. Override the output with
+`WORKSHOP_SCREENSHOT_PATH`. It does not use a committed test account or persist
+authentication state.
+
+Run ServerAPI in Development (the checked-in Development configuration uses
+mock repositories), and in another terminal start the Workshop Vite server:
+
+```bash
+ASPNETCORE_ENVIRONMENT=Development dotnet run --project MorWalPizVideo.ServerAPI --launch-profile http
+yarn --cwd frontend dev:shooter-workshop-client
+```
+
+Then run the browser test from the repository root:
+
+```bash
+WORKSHOP_LOCAL_MOCK_API=1 yarn --cwd frontend workspace shooter-workshop.client test:browser
+```
+
+The Development configuration enables mock repositories. The explicit
+`WORKSHOP_LOCAL_MOCK_API=1` acknowledgment prevents accidentally targeting a
+production service; it does not turn mock mode on in ServerAPI. The test
+defaults to `http://127.0.0.1:5180`. For the AppHost Workshop endpoint, set
+`WORKSHOP_BASE_URL=http://127.0.0.1:5179`. The development server proxies
+`/api` to ServerAPI; registration and login stay same-origin with the Workshop
+UI so the real HttpOnly account cookie and CSRF transport work. This test
+proves the application flow and installed Chromium, not the availability of a
+Copilot/Impeccable browser integration or production authentication/deployment.
+
 ## CI-Equivalent Focused Runs
 
 These commands are copied from the current workflows. They include TRX

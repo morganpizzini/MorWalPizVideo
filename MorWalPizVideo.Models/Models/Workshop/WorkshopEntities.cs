@@ -2,6 +2,7 @@ using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 using MorWalPizVideo.Server.Models;
 using MorWalPizVideo.Models.Models.Serializers;
+using System.Text.Json.Serialization;
 
 namespace MorWalPizVideo.Models.Models.Workshop;
 
@@ -9,9 +10,11 @@ public enum WorkshopTrackingMode { Counter, Interval, Manual }
 public enum WorkshopComponentStatus { Inventory, Installed, Maintenance, Retired }
 public enum WorkshopRecipeStatus { Active, Archived }
 public enum WorkshopMaintenanceEventType { Inspection, Cleaning, ComponentMaintenance, Replacement, CounterAdjustment, General, Malfunction }
-public enum WorkshopOperationType { FirearmCreated, FirearmUpdated, FirearmArchived, ComponentDefinitionCreated, ComponentDefinitionUpdated, ComponentDefinitionArchived, ComponentDefinitionDeleted, ComponentCreated, ComponentUpdated, ComponentArchived, ComponentDeleted, ComponentInstalled, ComponentRemoved, MaintenanceRecorded, CounterAdjusted, RecipeCreated, RecipeUpdated, RecipeArchived, ProductionRecorded, AllocationRecorded, AllocationReleased, AllocationReallocated, ShootingRecorded, ShootingCorrected, StockAdjusted, ComponentSwapped }
-public enum WorkshopAggregateKind { Firearm, Component, Batch, Allocation }
+public enum WorkshopOperationType { FirearmCreated, FirearmUpdated, FirearmArchived, ComponentDefinitionCreated, ComponentDefinitionUpdated, ComponentDefinitionArchived, ComponentDefinitionDeleted, ComponentCreated, ComponentUpdated, ComponentArchived, ComponentDeleted, ComponentInstalled, ComponentRemoved, MaintenanceRecorded, CounterAdjusted, RecipeCreated, RecipeUpdated, RecipeArchived, ProductionRecorded, AllocationRecorded, AllocationReleased, AllocationReallocated, ShootingRecorded, ShootingCorrected, StockAdjusted, ComponentSwapped, SupplyProductCreated, SupplyPurchaseRecorded, SupplyStockAdjusted, SupplyLotStatusChanged, ComponentPurchaseRecorded, ComponentPurchaseCorrected, ProductionEdited }
+public enum WorkshopAggregateKind { Firearm, Component, Batch, Allocation, SupplyLot }
 public enum WorkshopProjectionState { Current, Pending, Inconsistent }
+public enum WorkshopSupplyType { Primer, Bullet, Powder, Case, CommercialAmmunition }
+public enum WorkshopSupplyLotStatus { Available, Empty }
 
 public sealed record Firearm : BaseEntity
 {
@@ -60,6 +63,67 @@ public sealed record ComponentInstance : BaseEntity
     [BsonElement("revision")] public long Revision { get; init; }
 }
 
+public sealed record WorkshopSupplyProduct : BaseEntity
+{
+    [BsonElement("accountId")] public string AccountId { get; init; } = string.Empty;
+    [BsonElement("type")] public WorkshopSupplyType Type { get; init; }
+    [BsonElement("brand")] public string? Brand { get; init; }
+    [BsonElement("name")] public string Name { get; init; } = string.Empty;
+    [BsonElement("archived")] public bool Archived { get; init; }
+    [BsonElement("revision")] public long Revision { get; init; }
+}
+
+public sealed record WorkshopSupplyPurchase : BaseEntity
+{
+    [BsonElement("accountId")] public string AccountId { get; init; } = string.Empty;
+    [BsonElement("productId")] public string ProductId { get; init; } = string.Empty;
+    [BsonElement("purchasedAt")] public DateTime PurchasedAt { get; init; }
+    [BsonElement("quantity")] public long Quantity { get; init; }
+    [BsonElement("totalPrice")] public decimal TotalPrice { get; init; }
+    [BsonElement("currency")] public string Currency { get; init; } = string.Empty;
+    [BsonElement("lotIds")] public IReadOnlyList<string> LotIds { get; init; } = [];
+}
+
+public sealed record WorkshopSupplyLot : BaseEntity
+{
+    [BsonElement("accountId")] public string AccountId { get; init; } = string.Empty;
+    [BsonElement("purchaseId")] public string PurchaseId { get; init; } = string.Empty;
+    [BsonElement("productId")] public string ProductId { get; init; } = string.Empty;
+    [BsonElement("purchasedAt")] public DateTime PurchasedAt { get; init; }
+    [BsonElement("purchasedQuantity")] public long PurchasedQuantity { get; init; }
+    [BsonElement("availableQuantity")] public long AvailableQuantity { get; init; }
+    [BsonElement("totalPrice")] public decimal TotalPrice { get; init; }
+    [BsonElement("currency")] public string Currency { get; init; } = string.Empty;
+    [BsonElement("status")] public WorkshopSupplyLotStatus Status { get; init; } = WorkshopSupplyLotStatus.Available;
+    [BsonElement("itemCount")] public long? ItemCount { get; init; }
+    [BsonElement("revision")] public long Revision { get; init; }
+}
+
+public sealed record WorkshopComponentPurchase : BaseEntity
+{
+    [BsonElement("accountId")] public string AccountId { get; init; } = string.Empty;
+    [BsonElement("componentId")] public string ComponentId { get; init; } = string.Empty;
+    [BsonElement("purchaseDate")] public DateTime PurchaseDate { get; init; }
+    [BsonElement("totalPrice")] public decimal TotalPrice { get; init; }
+    [BsonElement("currency")] public string Currency { get; init; } = string.Empty;
+    [BsonElement("revision")] public long Revision { get; init; }
+    [BsonElement("history")] public IReadOnlyList<WorkshopComponentPurchaseRevision> History { get; init; } = [];
+}
+
+public sealed record WorkshopComponentPurchaseRevision(
+    long Revision, DateTime PurchaseDate, decimal TotalPrice, string Currency, string? Reason, DateTime RecordedAt);
+
+public sealed record WorkshopInventoryFact(
+    string Type,
+    string? ProductId = null,
+    string? PurchaseId = null,
+    string? LotId = null,
+    string? ComponentId = null,
+    decimal? PreviousAmount = null,
+    decimal? CurrentAmount = null,
+    string? Currency = null,
+    string? Reason = null);
+
 public sealed record ComponentInstallation : BaseEntity
 {
     [BsonElement("accountId")] public string AccountId { get; init; } = string.Empty;
@@ -86,8 +150,13 @@ public sealed record MaintenanceEvent : BaseEntity
 
 public sealed record RecipeSnapshot(
     string Name, string Caliber, [property: BsonSerializer(typeof(TolerantDecimalStringSerializer))] string? Oal, decimal? BulletWeight, string? BulletForm,
-    string? Drawing, string? Primer, string? Powder, decimal? PowderWeight, string? Notes,
-    long Version = 1);
+    string? Primer, string? Powder, decimal? PowderWeight, string? Notes,
+    string? PrimerProductId = null, string? PowderProductId = null,
+    long Version = 1)
+{
+    [BsonExtraElements, JsonIgnore]
+    public BsonDocument? LegacyFields { get; init; }
+}
 
 public sealed record AmmoRecipe : BaseEntity
 {
@@ -97,14 +166,16 @@ public sealed record AmmoRecipe : BaseEntity
     [BsonElement("oal"), BsonSerializer(typeof(TolerantDecimalStringSerializer))] public string? Oal { get; init; }
     [BsonElement("bulletWeight")] public decimal? BulletWeight { get; init; }
     [BsonElement("bulletForm")] public string? BulletForm { get; init; }
-    [BsonElement("drawing")] public string? Drawing { get; init; }
     [BsonElement("primer")] public string? Primer { get; init; }
     [BsonElement("powder")] public string? Powder { get; init; }
+    [BsonElement("primerProductId")] public string? PrimerProductId { get; init; }
+    [BsonElement("powderProductId")] public string? PowderProductId { get; init; }
     [BsonElement("powderWeight")] public decimal? PowderWeight { get; init; }
     [BsonElement("notes")] public string? Notes { get; init; }
     [BsonElement("status")] public WorkshopRecipeStatus Status { get; init; } = WorkshopRecipeStatus.Active;
     [BsonElement("version")] public long Version { get; init; } = 1;
     [BsonElement("updatedAt")] public DateTime UpdatedAt { get; init; }
+    [BsonExtraElements, JsonIgnore] public BsonDocument? LegacyFields { get; init; }
 }
 
 public sealed record AmmoRecipeVersion : BaseEntity
@@ -124,7 +195,28 @@ public sealed record ProductionSession : BaseEntity
     [BsonElement("quantityProduced")] public long QuantityProduced { get; init; }
     [BsonElement("notes")] public string? Notes { get; init; }
     [BsonElement("batchId")] public string BatchId { get; init; } = string.Empty;
+    [BsonElement("bulletProductId")] public string BulletProductId { get; init; } = string.Empty;
+    [BsonElement("primerLotAllocations")] public IReadOnlyList<WorkshopLotAllocation> PrimerLotAllocations { get; init; } = [];
+    [BsonElement("bulletLotAllocations")] public IReadOnlyList<WorkshopLotAllocation> BulletLotAllocations { get; init; } = [];
+    [BsonElement("revision")] public long Revision { get; init; }
 }
+
+public sealed record WorkshopLotAllocation(string LotId, long Quantity, long LotRevision);
+
+public sealed record WorkshopProductionCorrectionFact(
+    long ExpectedRevision,
+    DateTime PreviousProductionDate,
+    long PreviousQuantity,
+    string PreviousBulletProductId,
+    string? PreviousNotes,
+    IReadOnlyList<WorkshopLotAllocation> PreviousPrimerLotAllocations,
+    IReadOnlyList<WorkshopLotAllocation> PreviousBulletLotAllocations,
+    DateTime ProductionDate,
+    long Quantity,
+    string BulletProductId,
+    string? Notes,
+    IReadOnlyList<WorkshopLotAllocation> PrimerLotAllocations,
+    IReadOnlyList<WorkshopLotAllocation> BulletLotAllocations);
 
 public sealed record AmmoBatch : BaseEntity
 {
@@ -137,6 +229,9 @@ public sealed record AmmoBatch : BaseEntity
     [BsonElement("onHandQuantity")] public long OnHandQuantity { get; init; }
     [BsonElement("revision")] public long Revision { get; init; }
     [BsonElement("notes")] public string? Notes { get; init; }
+    [BsonElement("bulletProductId")] public string BulletProductId { get; init; } = string.Empty;
+    [BsonElement("primerLotAllocations")] public IReadOnlyList<WorkshopLotAllocation> PrimerLotAllocations { get; init; } = [];
+    [BsonElement("bulletLotAllocations")] public IReadOnlyList<WorkshopLotAllocation> BulletLotAllocations { get; init; } = [];
 }
 
 public sealed record AmmoAllocation : BaseEntity
@@ -190,6 +285,9 @@ public sealed record WorkshopOperation : BaseEntity
     [BsonElement("originalOperationId")] public string? OriginalOperationId { get; init; }
     [BsonElement("replacementOperationId")] public string? ReplacementOperationId { get; init; }
     [BsonElement("deltas")] public IReadOnlyList<WorkshopDelta> Deltas { get; init; } = [];
+    [BsonElement("inventoryFacts")] public IReadOnlyList<WorkshopInventoryFact> InventoryFacts { get; init; } = [];
+    [BsonElement("productionSnapshot")] public RecipeSnapshot? ProductionSnapshot { get; init; }
+    [BsonElement("productionCorrection")] public WorkshopProductionCorrectionFact? ProductionCorrection { get; init; }
     [BsonElement("sourceEntityIds")] public IReadOnlyList<string> SourceEntityIds { get; init; } = [];
     // Deterministic evidence for replay; projection status belongs to the reconciliation document.
     [BsonElement("contributionDigest")] public string ContributionDigest { get; init; } = string.Empty;

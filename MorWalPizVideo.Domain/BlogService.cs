@@ -291,44 +291,25 @@ public sealed class BlogService(IBlogRepository repository)
 public sealed class BlogRepository(IMongoDatabase database) : BaseRepository<BlogPost>(database, DbCollections.BlogPosts), IBlogRepository
 {
     private IMongoCollection<BlogPost> collection => _collection;
-    private Task? indexTask;
-    private Task? listIndexTask;
-    internal const string ListIndexName = "blog_channel_publishedat_id";
-    internal static BsonDocument ListIndexKeys => new()
-    {
-        { "channelId", 1 },
-        { "publishedAt", -1 },
-        { "_id", 1 }
-    };
     internal static BsonDocument ListSortKeys => new()
     {
         { "publishedAt", -1 }
     };
-
-    private Task EnsureIndexAsync() => indexTask ??= collection.Indexes.CreateOneAsync(new CreateIndexModel<BlogPost>(
-        Builders<BlogPost>.IndexKeys.Ascending(post => post.ChannelId).Ascending(post => post.Slug),
-        new CreateIndexOptions { Name = "blog_channel_slug_unique", Unique = true }));
-
-    private Task EnsureListIndexAsync() => listIndexTask ??= collection.Indexes.CreateOneAsync(
-        new CreateIndexModel<BlogPost>(new BsonDocumentIndexKeysDefinition<BlogPost>(ListIndexKeys),
-            new CreateIndexOptions { Name = ListIndexName }));
 
     public Task<BlogPost?> GetAsync(string channelId, string id) => collection.Find(post => post.ChannelId == channelId && post.Id == id).FirstOrDefaultAsync()!;
     public Task<BlogPost?> GetPublishedAsync(string channelId, string slug) => collection.Find(post => post.ChannelId == channelId && post.Slug == slug && post.Published != null)
         .Project<BlogPost>(Builders<BlogPost>.Projection.Exclude(post => post.Draft)).FirstOrDefaultAsync()!;
     public async Task<IReadOnlyList<BlogPost>> ListAsync(string channelId, bool publishedOnly, int skip, int take)
     {
-        await EnsureListIndexAsync();
         var query = collection.Find(post => post.ChannelId == channelId && (!publishedOnly || post.Published != null))
             .Sort(new BsonDocumentSortDefinition<BlogPost>(ListSortKeys)).Skip(skip).Limit(take);
         return publishedOnly
             ? await query.Project<BlogPost>(Builders<BlogPost>.Projection.Exclude(post => post.Draft)).ToListAsync()
             : await query.ToListAsync();
     }
-    public async Task CreateAsync(BlogPost post) { await EnsureIndexAsync(); await collection.InsertOneAsync(post); }
+    public async Task CreateAsync(BlogPost post) => await collection.InsertOneAsync(post);
     public async Task<bool> ReplaceAsync(BlogPost post, long expectedRevision)
     {
-        await EnsureIndexAsync();
         var result = await collection.ReplaceOneAsync(item => item.ChannelId == post.ChannelId && item.Id == post.Id && item.Revision == expectedRevision, post);
         return result.ModifiedCount == 1;
     }

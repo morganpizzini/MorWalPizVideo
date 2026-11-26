@@ -21,10 +21,10 @@
 
 The current working tree contains the initial Workshop implementation baseline across
 ServerAPI, Domain, Models, Contracts, the standalone frontend workspace, account
-transport, AppHost, CI, and image-staging deployment metadata. The feature-owned
-Mongo index definitions are included in the executable central operations manifest for
-reviewed audit/apply. They are intentionally not part of the limited startup
-blog-index bootstrap.
+transport, AppHost, CI, and image-staging deployment metadata. The feature-owned Mongo index definitions are included in the executable central
+operations manifest, which BackOffice attempts through its non-blocking startup
+initializer. Index failures are logged but do not gate Workshop traffic; operators
+can inspect and remediate actual state through the existing audit/apply surface.
 
 The 2026-11-14 refinement batch is now represented in source: component-definition
 compatibility tags are normalized and persisted; component creation can atomically
@@ -96,6 +96,47 @@ whole-page loading message. React Router 7's removed `defer()` helper is not
 recreated; raw promises are the supported interface. Route actions, fetchers, and
 automatic loader revalidation remain the freshness owner after successful mutations.
 
+## Finance and supplies inventory
+
+The finance and supplies inventory is an online-only, account-owned Workshop
+feature. It records individual product purchases and lots for primers, bullets,
+powder, cases and commercial ammunition, plus purchase-price information for
+physical components. Existing records and offline-created components without
+purchase information have an unknown historical price and contribute nothing to
+recorded spending until entered; this zero baseline is not a claim about historical
+spend.
+
+Recipes reference primer and powder products. Production selects a bullet product
+and oldest available primer/bullet purchase lots; the production record retains the
+selected lot and purchase-price evidence. Editing an existing production record updates its date, quantity, notes, bullet
+product and lot effects and retains an auditable correction history. Recipe identity
+stays fixed so shooting-history links are not silently rewritten; the production's
+recipe snapshot also remains unchanged when the current recipe is later revised.
+Corrected quantity cannot be less than the amount already consumed.
+Primer and bullet purchase cost is attributed as recorded stock is consumed.
+Powder and case cost is recognized at purchase time without inferring their
+consumption. Purchase spending and partial consumption cost are separate,
+per-currency views and are not combined into a complete unit-cost claim.
+Commercial ammunition is a manually managed purchased package, distinct from
+produced batches and shooting-session consumption. Inventory data is not included
+in offline snapshots, commands or service-worker caches.
+
+The user expects online operations by one person and accepts the risk that
+interruption between separate MongoDB writes can leave a partial production,
+inventory or batch update. This feature does not add a MongoDB transaction or an
+account-wide coordination gate. Concurrent-write serialization across tabs or
+server instances is not guaranteed. The UI must distinguish explicit rejection
+from an unknown result after a lost response and offer a way to inspect or edit an
+existing production record. This is a documented product limitation, not a
+correctness guarantee.
+
+Drawing is removed from current recipe/snapshot contracts and UI, with no
+Drawing-to-Bullet-form fallback. Existing persisted Drawing data is contracted only
+through the separately reviewed, restartable migration at
+`scripts/migrations/remove-workshop-drawing.mongosh.js`; it requires a verified
+backup and stopped Workshop writes and is not run by application startup or feature
+deployment.
+
 **Accepted target — allocation removal:** Ammunition allocations/reservations are not
 part of the current Workshop product model. Recipes describe ammunition and batches
 carry on-hand stock; neither is associated with a firearm before consumption.
@@ -112,9 +153,10 @@ optional when a physical component is created. The current implementation descri
 above implements that corrected Components route ownership.
 
 This status is implementation evidence, not release approval. Full domain acceptance
-coverage, exact-origin browser authentication proof, duplicate/index audit and apply
-evidence, Azure custom-domain/TLS/runtime configuration, and complete operational
-rollback evidence remain open. BackOffice remains operational index governance only;
+coverage, exact-origin browser authentication proof, duplicate/TTL review and
+actual-index audit evidence, Azure custom-domain/TLS/runtime configuration, and
+complete operational rollback evidence remain open. BackOffice remains
+operational index governance only;
 it has no Workshop product behavior or ownership. Installation-specific read
 projections and deployed same-origin browser proof remain open. Recipe editing is
 implemented through the account-owned, versioned Workshop PUT route; recipe search,

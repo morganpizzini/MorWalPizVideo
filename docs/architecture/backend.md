@@ -69,14 +69,12 @@ reconciliation repairs projections without modifying historical facts. The opera
 service owns cross-document invariants, idempotency, correction links, projection
 status, and bounded replay. MongoDB transaction support is not assumed.
 
-Workshop feature-owned index definitions are verified and included in the repository's
-existing central operational index manifest. BackOffice's involvement is limited to
-that operational audit/apply surface; it has no Workshop controller, service,
-repository, authorization, UI, or product workflow. This is an unavoidable
-central-index coupling, not a product dependency. The Workshop definitions are
-converted into the executable `MongoIndexOperationsService.Manifest`; they remain
-manual reviewed operations and are not part of the limited startup blog-index
-bootstrap.
+Workshop feature-owned index definitions are included in the executable
+`MongoIndexOperationsService.Manifest`, which BackOffice attempts through its
+non-blocking startup initializer. BackOffice has no Workshop controller, service,
+repository, authorization, UI, or product workflow. Index failures are logged
+but do not gate Workshop traffic; operators can inspect and remediate actual
+state through the existing audit/apply surface.
 
 ## FreezerAnalysis API
 
@@ -104,7 +102,7 @@ operational verification before permanent-erasure claims.
 - `BaseRepository<T>` implements generic CRUD.
 - Specialized repository interfaces identify collections and feature queries.
 - Updates commonly replace complete documents.
-- Source-managed Mongo index audit/apply operations exist via BackOffice (`MongoIndexesController`, `MongoIndexOperationsService`). ServerAPI and BackOffice also verify/create only the blog-interaction indexes before accepting traffic in Mongo mode; mock mode skips this startup service. Other indexes remain manually applied. See [ADR-022](adr/ADR-022-startup-blog-index-bootstrap.md).
+- Source-managed Mongo index audit/apply operations exist via BackOffice (`MongoIndexesController`, `MongoIndexOperationsService`). In Mongo mode, BackOffice attempts the complete shared-platform manifest asynchronously at startup and logs failures without blocking startup or readiness. ServerAPI and ShortLinks do not create or verify indexes at startup; mock mode skips index initialization. See [ADR-029](adr/ADR-029-nonblocking-mongo-index-startup.md).
 - `BsonIgnoreExtraElements` supports additive compatibility for many entities.
 - QuickLinks link kinds are numeric persisted/API enum values. Preserve existing
   assignments and append new kinds only; the YouTube kind is `5`, while
@@ -133,7 +131,7 @@ VideoImporter uses EF Core SQLite for local settings, tenant state, and scheduli
 
 ### VideoImporter channel settings
 
-BackOffice owns the channel-authoritative `videoImporterChannelSettings` aggregate. Its versioned JSON payload is client-owned opaque data; the repository reads and atomically upserts by the channel resolved from `X-Channel-Id`. The unique `channelId` index is source-managed in `MongoIndexOperationsService` and is applied only through the reviewed manual index operation after duplicate audit.
+BackOffice owns the channel-authoritative `videoImporterChannelSettings` aggregate. Its versioned JSON payload is client-owned opaque data; the repository reads and atomically upserts by the channel resolved from `X-Channel-Id`. The unique `channelId` index is source-managed in `MongoIndexOperationsService` and attempted by BackOffice's non-blocking startup initializer; duplicate audit and actual index verification remain operational safeguards, not startup gates.
 
 The v1 importer snapshot allowlists application name, default hashtags, languages/disclaimers by language code, and publish schedules by value. SQLite remains a tenant-filtered working cache; the importer writes remotely before projecting acknowledged values in one local transaction. Bootstrap credentials, channel selection, social tokens, history, machine paths, and local row IDs are excluded. See [ADR-021](adr/ADR-021-video-importer-channel-settings.md).
 
@@ -215,9 +213,9 @@ revisions. Mock mode always uses
 collections; it does not call an external provider. Mock startup seeds the
 reviewed deterministic baselines. Production prompt baselines are initialized
 explicitly through the permission-protected `/api/v1/ai/workflows/bootstrap`
-operation; startup never creates production prompts. The limited blog-interaction
-index bootstrap is documented separately in
-[ADR-022](adr/ADR-022-startup-blog-index-bootstrap.md).
+operation; startup never creates production prompts. Shared-platform Mongo
+index initialization is documented separately in
+[ADR-029](adr/ADR-029-nonblocking-mongo-index-startup.md).
 
 Immutable revisions are resolved per stage. Video review creates opaque item
 IDs before ten-item chunking, validates exact response identities and requested
@@ -267,7 +265,7 @@ Rules:
 - Public affiliate products use the single `YouTubeChannelId` configured by the
     ServerAPI host. Product and product-category mutations invalidate the local
     `products` cache and the ServerAPI `tag-product` output-cache tag.
-- The phase 4 Mongo manifest names the normalized unique compilation URL index and the global short-link code index. Those indexes remain approved manual operations, not startup actions; local source review does not prove production deployment. Blog-interaction indexes are the limited startup-managed exception in [ADR-022](adr/ADR-022-startup-blog-index-bootstrap.md).
+- The phase 4 Mongo manifest names the normalized unique compilation URL index and the global short-link code index. BackOffice now attempts the source manifest at startup; the operational JSON snapshot remains historical/review evidence and local source or startup logs do not prove deployed database state. Blog-interaction indexes are included in the broader policy in [ADR-029](adr/ADR-029-nonblocking-mongo-index-startup.md).
 
 ## Background Work
 

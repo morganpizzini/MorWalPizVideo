@@ -2,12 +2,15 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   correctWorkshopShooting,
   getWorkshopBatches,
+  getWorkshopInventory,
+  getWorkshopProductionRecords,
   createAndInstallWorkshopComponent,
   installWorkshopComponent,
   removeWorkshopComponent,
   createWorkshopComponentDefinition,
   recordWorkshopMaintenance,
   recordWorkshopProduction,
+  updateWorkshopProduction,
   recordWorkshopShooting,
   getWorkshopHistory,
   getWorkshopFirearmDetail,
@@ -69,8 +72,12 @@ describe("Workshop account transport", () => {
 
     await recordWorkshopProduction({
       recipeId: "recipe-1",
+      recipeVersion: 1,
       productionDate: "2026-11-13T00:00:00Z",
       quantityProduced: 250,
+      bulletProductId: "bullet-product",
+      primerLotAllocations: [{ lotId: "primer-lot", quantity: 250 }],
+      bulletLotAllocations: [{ lotId: "bullet-lot", quantity: 250 }],
       notes: "range session",
       idempotencyKey: "production-key",
     });
@@ -84,7 +91,70 @@ describe("Workshop account transport", () => {
       recipeId: "recipe-1",
       productionDate: "2026-11-13T00:00:00Z",
       quantityProduced: 250,
+      bulletProductId: "bullet-product",
+      primerLotAllocations: [{ lotId: "primer-lot", quantity: 250 }],
       idempotencyKey: "production-key",
+    });
+  });
+
+  it("uses account transport for online inventory reads and production-record prefill", async () => {
+    const fetchMock = vi.fn().mockImplementation(() =>
+      Promise.resolve(Response.json({
+        products: [],
+        lots: [],
+        componentPurchases: [],
+        spending: [],
+        partialConsumptionCosts: [],
+        missingComponentPrices: [],
+      })),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await getWorkshopInventory();
+    await getWorkshopProductionRecords();
+
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      1,
+      "/api/v1/workshop/inventory",
+      expect.objectContaining({ credentials: "include" }),
+    );
+    expect(String(fetchMock.mock.calls[1][0])).toBe(
+      "/api/v1/workshop/ammunition/production",
+    );
+  });
+
+  it("updates a production record with its expected revision and selected lot allocations", async () => {
+    const fetchMock = vi.fn((input: RequestInfo | URL) =>
+      Promise.resolve(
+        String(input).endsWith("/csrf")
+          ? Response.json({ token: "production-edit-csrf" })
+          : Response.json({ id: "operation-edit" }),
+      ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await updateWorkshopProduction("session/1", {
+      recipeId: "recipe-1",
+      recipeVersion: 2,
+      productionDate: "2026-11-14T00:00:00Z",
+      quantityProduced: 75,
+      bulletProductId: "bullet-product",
+      primerLotAllocations: [{ lotId: "primer-lot", quantity: 75 }],
+      bulletLotAllocations: [{ lotId: "bullet-lot", quantity: 75 }],
+      notes: "corrected",
+      idempotencyKey: "production-edit-key",
+      expectedRevision: 3,
+    });
+
+    expect(String(fetchMock.mock.calls[1][0])).toBe(
+      "/api/v1/workshop/ammunition/production/session%2F1",
+    );
+    expect(new Headers(fetchMock.mock.calls[1][1]?.headers).get("X-CSRF-TOKEN"))
+      .toBe("production-edit-csrf");
+    expect(JSON.parse(String(fetchMock.mock.calls[1][1]?.body))).toMatchObject({
+      expectedRevision: 3,
+      quantityProduced: 75,
+      primerLotAllocations: [{ lotId: "primer-lot", quantity: 75 }],
     });
   });
 

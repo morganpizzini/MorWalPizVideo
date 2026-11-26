@@ -225,6 +225,10 @@ public sealed class WorkshopMockRepository(IMockScenario scenario) : IWorkshopRe
             AmmoRecipeVersion x => x.AccountId,
             ProductionSession x => x.AccountId,
             AmmoBatch x => x.AccountId,
+            WorkshopSupplyProduct x => x.AccountId,
+            WorkshopSupplyPurchase x => x.AccountId,
+            WorkshopSupplyLot x => x.AccountId,
+            WorkshopComponentPurchase x => x.AccountId,
             AmmoAllocation x => x.AccountId,
             ShootingSession x => x.AccountId,
             WorkshopOperation x => x.AccountId,
@@ -240,8 +244,12 @@ public sealed class WorkshopMockRepository(IMockScenario scenario) : IWorkshopRe
             ComponentDefinition x => x.Revision,
             ComponentInstance x => x.Revision,
             ComponentInstallation x => x.Revision,
+            ProductionSession x => x.Revision,
             AmmoBatch x => x.Revision,
             AmmoAllocation x => x.Revision,
+            WorkshopSupplyProduct x => x.Revision,
+            WorkshopSupplyLot x => x.Revision,
+            WorkshopComponentPurchase x => x.Revision,
             _ => null
         };
 
@@ -274,6 +282,15 @@ public static class WorkshopMongoIndexes
             new BsonDocument { { "accountId", 1 }, { "componentId", 1 }, { "removedAt", 1 } }),
         new("batches.account_recipe_date", DbCollections.WorkshopAmmoBatches, "ix_workshop_batches_account_recipe_date",
             new BsonDocument { { "accountId", 1 }, { "recipeId", 1 }, { "productionDate", -1 } }),
+        new("supplyproducts.account_type", DbCollections.WorkshopSupplyProducts, "ix_workshop_supplyproducts_account_type",
+            new BsonDocument { { "accountId", 1 }, { "type", 1 }, { "archived", 1 } }),
+        new("supplypurchases.account_product_date", DbCollections.WorkshopSupplyPurchases, "ix_workshop_supplypurchases_account_product_date",
+            new BsonDocument { { "accountId", 1 }, { "productId", 1 }, { "purchasedAt", -1 } }),
+        new("supplylots.account_product_date", DbCollections.WorkshopSupplyLots, "ix_workshop_supplylots_account_product_date",
+            new BsonDocument { { "accountId", 1 }, { "productId", 1 }, { "purchasedAt", 1 }, { "_id", 1 } }),
+        new("componentpurchases.account_component.unique", DbCollections.WorkshopComponentPurchases,
+            "ux_workshop_componentpurchases_account_component",
+            new BsonDocument { { "accountId", 1 }, { "componentId", 1 } }, true),
         new("activities.account_date_type", DbCollections.WorkshopActivities, "ix_workshop_activities_account_date_type",
             new BsonDocument { { "accountId", 1 }, { "effectiveAt", -1 }, { "type", 1 } })
     ];

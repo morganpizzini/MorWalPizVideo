@@ -1,7 +1,9 @@
 using Microsoft.Extensions.Configuration;
 using MorWalPizVideo.Domain;
 using MorWalPizVideo.Domain.Scenarios;
+using MorWalPizVideo.Models.Constraints;
 using MorWalPizVideo.Models.Models;
+using MorWalPizVideo.Models.Models.Workshop;
 using MorWalPizVideo.Server.Models;
 
 namespace MorWalPizVideo.BackOffice.Tests.Features;
@@ -54,6 +56,31 @@ public class MockScenarioLifecycleTests
         first.Add("pages", new Page("", "First", "", "/first", "") { Id = "first-only" });
 
         Assert.DoesNotContain(second.Read<Page>("pages"), page => page.Id == "first-only");
+    }
+
+    [Fact]
+    public void Primary_scenario_initializes_empty_workshop_collections()
+    {
+        var lifecycle = new MockScenarioLifecycle(new ConfigurationBuilder().Build());
+
+        Assert.Empty(lifecycle.Read<Firearm>(DbCollections.WorkshopFirearms));
+        Assert.Empty(lifecycle.Read<ComponentDefinition>(DbCollections.WorkshopComponentDefinitions));
+        Assert.Empty(lifecycle.Read<ComponentInstance>(DbCollections.WorkshopComponentInstances));
+        Assert.Empty(lifecycle.Read<ComponentInstallation>(DbCollections.WorkshopComponentInstallations));
+        Assert.Empty(lifecycle.Read<MaintenanceEvent>(DbCollections.WorkshopMaintenanceEvents));
+        Assert.Empty(lifecycle.Read<AmmoRecipe>(DbCollections.WorkshopRecipes));
+        Assert.Empty(lifecycle.Read<AmmoRecipeVersion>(DbCollections.WorkshopRecipeVersions));
+        Assert.Empty(lifecycle.Read<ProductionSession>(DbCollections.WorkshopProductionSessions));
+        Assert.Empty(lifecycle.Read<AmmoBatch>(DbCollections.WorkshopAmmoBatches));
+        Assert.Empty(lifecycle.Read<WorkshopSupplyProduct>(DbCollections.WorkshopSupplyProducts));
+        Assert.Empty(lifecycle.Read<WorkshopSupplyPurchase>(DbCollections.WorkshopSupplyPurchases));
+        Assert.Empty(lifecycle.Read<WorkshopSupplyLot>(DbCollections.WorkshopSupplyLots));
+        Assert.Empty(lifecycle.Read<WorkshopComponentPurchase>(DbCollections.WorkshopComponentPurchases));
+        Assert.Empty(lifecycle.Read<AmmoAllocation>(DbCollections.WorkshopAmmoAllocations));
+        Assert.Empty(lifecycle.Read<ShootingSession>(DbCollections.WorkshopShootingSessions));
+        Assert.Empty(lifecycle.Read<WorkshopOperation>(DbCollections.WorkshopOperations));
+        Assert.Empty(lifecycle.Read<WorkshopActivity>(DbCollections.WorkshopActivities));
+        Assert.Empty(lifecycle.Read<WorkshopReconciliationState>(DbCollections.WorkshopReconciliation));
     }
 
     [Fact]

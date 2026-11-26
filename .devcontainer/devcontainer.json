@@ -1,6 +1,6 @@
 {
   "name": "MorWalPizVideo development",
-  "image": "mcr.microsoft.com/devcontainers/dotnet:1-10.0-bookworm",
+  "image": "mcr.microsoft.com/devcontainers/dotnet:3-11.0",
   "features": {
     "ghcr.io/devcontainers/features/node:1": {
       "version": "22",
@@ -21,7 +21,9 @@
     5174,
     5175,
     5176,
-    5177
+    5177,
+    5179,
+    5180
   ],
   "portsAttributes": {
     "17034": {
@@ -59,9 +61,17 @@
     "5177": {
       "label": "Shooting Range client",
       "protocol": "http"
+    },
+    "5179": {
+      "label": "Shooter Workshop (AppHost)",
+      "protocol": "http"
+    },
+    "5180": {
+      "label": "Shooter Workshop (standalone)",
+      "protocol": "http"
     }
   },
-  "postCreateCommand": "corepack enable && corepack prepare yarn@1.22.22 --activate && yarn --cwd frontend install --frozen-lockfile",
+  "postCreateCommand": "bash .devcontainer/post-create.sh",
   "customizations": {
     "vscode": {
       "extensions": [

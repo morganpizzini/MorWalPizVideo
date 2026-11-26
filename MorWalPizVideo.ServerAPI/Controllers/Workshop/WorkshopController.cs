@@ -153,6 +153,122 @@ public sealed class WorkshopController(WorkshopService service, IPublicAccountSe
     public async Task<IActionResult> Components(CancellationToken ct) =>
         Ok(await service.GetComponentsAsync(AccountId(), ct));
 
+    [HttpGet("inventory")]
+    public async Task<IActionResult> Inventory(CancellationToken ct)
+    {
+        var inventory = await service.GetInventoryAsync(AccountId(), ct);
+        return Ok(new WorkshopInventoryContract(
+            inventory.Products.Select(x => new WorkshopInventoryProductContract(
+                x.Id, SupplyTypeName(x.Type), x.Brand, x.Name, x.Archived)).ToArray(),
+            inventory.Lots.Select(x => new WorkshopInventoryLotContract(
+                x.Id, x.ProductId, x.PurchasedAt, x.PurchasedQuantity, x.AvailableQuantity,
+                x.TotalPrice, x.Currency, x.Status == WorkshopSupplyLotStatus.Empty, x.ItemCount, x.Revision)).ToArray(),
+            inventory.ComponentPurchases.Select(ToComponentPurchaseContract).ToArray(),
+            inventory.Spending.Select(x => new WorkshopCurrencyTotalContract(x.Currency, x.Total)).ToArray(),
+            inventory.PartialConsumptionCosts.Select(x => new WorkshopCurrencyTotalContract(x.Currency, x.Total)).ToArray(),
+            inventory.MissingComponentPrices));
+    }
+
+    [HttpPost("inventory/products")]
+    public async Task<IActionResult> CreateSupplyProduct(CreateWorkshopSupplyProductRequest request, CancellationToken ct)
+    {
+        if (!HasCsrf()) return CsrfFailure();
+        try
+        {
+            var product = await service.CreateSupplyProductAsync(AccountId(), request.Type, request.Brand,
+                request.Name, request.IdempotencyKey, ct);
+            return Ok(new WorkshopInventoryProductContract(
+                product.Id, SupplyTypeName(product.Type), product.Brand, product.Name, product.Archived));
+        }
+        catch (WorkshopValidationException ex) { return ValidationProblem(ex.Message); }
+        catch (WorkshopConflictException ex) { return Conflict(new ProblemDetails { Title = ex.Message }); }
+    }
+
+    [HttpPost("inventory/purchases")]
+    public async Task<IActionResult> PurchaseSupply(RecordWorkshopSupplyPurchaseRequest request, CancellationToken ct)
+    {
+        if (!HasCsrf()) return CsrfFailure();
+        try
+        {
+            var result = await service.RecordSupplyPurchaseAsync(AccountId(), request.ProductId, request.PurchaseDate,
+                request.Quantity, request.TotalPrice, request.Currency, request.IdempotencyKey, ct);
+            return Ok(new
+            {
+                id = result.Purchase.Id,
+                productId = result.Purchase.ProductId,
+                purchaseDate = result.Purchase.PurchasedAt,
+                quantity = result.Purchase.Quantity,
+                totalPrice = result.Purchase.TotalPrice,
+                currency = result.Purchase.Currency,
+                lots = result.Lots.Select(x => new WorkshopInventoryLotContract(
+                    x.Id, x.ProductId, x.PurchasedAt, x.PurchasedQuantity, x.AvailableQuantity,
+                    x.TotalPrice, x.Currency, x.Status == WorkshopSupplyLotStatus.Empty, x.ItemCount, x.Revision)).ToArray()
+            });
+        }
+        catch (WorkshopValidationException ex) { return ValidationProblem(ex.Message); }
+        catch (WorkshopConflictException ex) { return Conflict(new ProblemDetails { Title = ex.Message }); }
+    }
+
+    [HttpPost("inventory/adjustments")]
+    public async Task<IActionResult> AdjustSupplyStock(AdjustWorkshopSupplyStockRequest request, CancellationToken ct)
+    {
+        if (!HasCsrf()) return CsrfFailure();
+        try
+        {
+            var lot = await service.AdjustSupplyStockAsync(AccountId(), request.LotId, request.PhysicalCount,
+                request.ExpectedRevision, request.Reason, request.IdempotencyKey, ct);
+            return Ok(ToInventoryLotContract(lot));
+        }
+        catch (WorkshopValidationException ex) { return ValidationProblem(ex.Message); }
+        catch (WorkshopConflictException ex) { return Conflict(new ProblemDetails { Title = ex.Message }); }
+    }
+
+    [HttpPost("inventory/lots/{lotId}/status")]
+    public async Task<IActionResult> SetSupplyLotStatus(
+        string lotId, SetWorkshopSupplyLotStatusRequest request, CancellationToken ct)
+    {
+        if (!HasCsrf()) return CsrfFailure();
+        try
+        {
+            var lot = await service.SetSupplyLotStatusAsync(AccountId(), lotId, request.IsEmpty,
+                request.ExpectedRevision, request.IdempotencyKey, ct);
+            return Ok(ToInventoryLotContract(lot));
+        }
+        catch (WorkshopValidationException ex) { return ValidationProblem(ex.Message); }
+        catch (WorkshopConflictException ex) { return Conflict(new ProblemDetails { Title = ex.Message }); }
+    }
+
+    [HttpPost("inventory/components/{componentId}/purchase")]
+    public async Task<IActionResult> PurchaseComponent(
+        string componentId, RecordWorkshopComponentPurchaseRequest request, CancellationToken ct)
+    {
+        if (!HasCsrf()) return CsrfFailure();
+        try
+        {
+            var purchase = await service.RecordComponentPurchaseAsync(AccountId(), componentId,
+                request.PurchaseDate, request.TotalPrice, request.Currency, request.IdempotencyKey, ct);
+            return Ok(ToComponentPurchaseContract(purchase));
+        }
+        catch (WorkshopValidationException ex) { return ValidationProblem(ex.Message); }
+        catch (WorkshopConflictException ex) { return Conflict(new ProblemDetails { Title = ex.Message }); }
+    }
+
+    [HttpPut("inventory/components/{componentId}/purchase")]
+    public async Task<IActionResult> CorrectComponentPurchase(
+        string componentId, CorrectWorkshopComponentPurchaseRequest request, CancellationToken ct)
+    {
+        if (!HasCsrf()) return CsrfFailure();
+        try
+        {
+            var purchase = await service.CorrectComponentPurchaseAsync(AccountId(), componentId,
+                request.PurchaseDate, request.TotalPrice, request.Currency, request.ExpectedRevision,
+                request.Reason, request.IdempotencyKey, ct);
+            return Ok(ToComponentPurchaseContract(purchase));
+        }
+        catch (WorkshopValidationException ex) { return ValidationProblem(ex.Message); }
+        catch (WorkshopConflictException ex) { return Conflict(new ProblemDetails { Title = ex.Message }); }
+    }
+
     [HttpGet("components/installations")]
     public async Task<IActionResult> Installations(CancellationToken ct) =>
         Ok(await service.GetComponentInstallationsAsync(AccountId(), ct));
@@ -288,15 +404,40 @@ public sealed class WorkshopController(WorkshopService service, IPublicAccountSe
     public async Task<IActionResult> Batches(CancellationToken ct) =>
         Ok(await service.GetBatchesAsync(AccountId(), ct));
 
+    [HttpGet("ammunition/production")]
+    public async Task<IActionResult> ProductionRecords(CancellationToken ct)
+    {
+        var records = await service.GetProductionRecordsAsync(AccountId(), ct);
+        return Ok(records.Select(record => new WorkshopProductionRecordContract(
+            record.Session,
+            record.Corrections.Select(x => new WorkshopProductionCorrectionContract(
+                x.Operation.Id, x.Operation.RecordedAt, x.Correction)).ToArray(),
+            record.ProjectionPending)).ToArray());
+    }
+
     [HttpPost("ammunition/production")]
     public async Task<IActionResult> Produce(RecordWorkshopProductionRequest request, CancellationToken ct)
     {
         if (!HasCsrf()) return CsrfFailure();
         try
         {
-            var result = await service.RecordProductionAsync(AccountId(),
-                new(request.RecipeId, request.ProductionDate, request.QuantityProduced, request.Notes, request.IdempotencyKey), ct);
-            return Ok(ToContract(result));
+            var result = await service.RecordProductionWithSuppliesAsync(AccountId(), ToProductionCommand(request), ct);
+            return Ok(ToProductionContract(result));
+        }
+        catch (WorkshopValidationException ex) { return ValidationProblem(ex.Message); }
+        catch (WorkshopConflictException ex) { return Conflict(new ProblemDetails { Title = ex.Message }); }
+    }
+
+    [HttpPut("ammunition/production/{sessionId}")]
+    public async Task<IActionResult> UpdateProduction(
+        string sessionId, UpdateWorkshopProductionRequest request, CancellationToken ct)
+    {
+        if (!HasCsrf()) return CsrfFailure();
+        try
+        {
+            var result = await service.UpdateProductionAsync(AccountId(), sessionId,
+                new(ToProductionCommand(request), request.ExpectedRevision), ct);
+            return Ok(ToProductionContract(result));
         }
         catch (WorkshopValidationException ex) { return ValidationProblem(ex.Message); }
         catch (WorkshopConflictException ex) { return Conflict(new ProblemDetails { Title = ex.Message }); }
@@ -422,11 +563,36 @@ public sealed class WorkshopController(WorkshopService service, IPublicAccountSe
         title: "The CSRF token is invalid.",
         extensions: new Dictionary<string, object?> { ["code"] = "csrf_invalid" });
     private static RecipeSnapshot Snapshot(WorkshopRecipeRequest request) =>
-        new(request.Name, request.Caliber, request.Oal, request.BulletWeight, request.BulletForm, request.Drawing,
-            request.Primer, request.Powder, request.PowderWeight, request.Notes);
+        new(request.Name, request.Caliber, request.Oal, request.BulletWeight, request.BulletForm,
+            request.Primer, request.Powder, request.PowderWeight, request.Notes,
+            request.PrimerProductId, request.PowderProductId);
     private static WorkshopOperationContract ToContract(WorkshopOperationResult result) =>
         new(result.Operation.Id, result.Operation.OperationType, result.Operation.EffectiveAt,
             result.Operation.RecordedAt, result.Operation.ContributionDigest);
+    private static WorkshopOperationMutationContract ToProductionContract(WorkshopProductionMutationResult result) =>
+        new(result.Operation.Id, result.Operation.OperationType, result.Operation.EffectiveAt,
+            result.Operation.RecordedAt, result.Operation.ContributionDigest, result.Idempotent,
+            result.Session, result.Batch);
+    private static WorkshopProductionCommand ToProductionCommand(RecordWorkshopProductionRequest request) =>
+        new(request.RecipeId, request.ProductionDate, request.QuantityProduced, request.Notes, request.IdempotencyKey,
+            request.RecipeVersion, request.BulletProductId,
+            request.PrimerLotAllocations.Select(x => new WorkshopProductionSelection(x.LotId, x.Quantity)).ToArray(),
+            request.BulletLotAllocations.Select(x => new WorkshopProductionSelection(x.LotId, x.Quantity)).ToArray());
+    private static WorkshopInventoryLotContract ToInventoryLotContract(WorkshopSupplyLot lot) =>
+        new(lot.Id, lot.ProductId, lot.PurchasedAt, lot.PurchasedQuantity, lot.AvailableQuantity,
+            lot.TotalPrice, lot.Currency, lot.Status == WorkshopSupplyLotStatus.Empty, lot.ItemCount, lot.Revision);
+    private static WorkshopComponentPurchaseContract ToComponentPurchaseContract(WorkshopComponentPurchase purchase) =>
+        new(purchase.Id, purchase.ComponentId, purchase.PurchaseDate, purchase.TotalPrice,
+            purchase.Currency, purchase.Revision, purchase.History);
+    private static string SupplyTypeName(WorkshopSupplyType type) => type switch
+    {
+        WorkshopSupplyType.Primer => "primer",
+        WorkshopSupplyType.Bullet => "bullet",
+        WorkshopSupplyType.Powder => "powder",
+        WorkshopSupplyType.Case => "case",
+        WorkshopSupplyType.CommercialAmmunition => "commercialAmmunition",
+        _ => throw new ArgumentOutOfRangeException(nameof(type))
+    };
 
     private static string ToCsv(WorkshopReportData report)
     {

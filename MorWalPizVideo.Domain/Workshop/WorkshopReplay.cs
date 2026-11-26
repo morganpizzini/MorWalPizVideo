@@ -68,6 +68,14 @@ public sealed class WorkshopReconciliationService(
         await CompareAsync<AmmoBatch>(MorWalPizVideo.Models.Constraints.DbCollections.WorkshopAmmoBatches,
             WorkshopAggregateKind.Batch, (x, value) => x.OnHandQuantity != value.Stock,
             (x, value) => x with { OnHandQuantity = value.Stock, Revision = x.Revision + 1 }, replay, mismatches, repair, accountId, cancellationToken);
+        await CompareAsync<WorkshopSupplyLot>(MorWalPizVideo.Models.Constraints.DbCollections.WorkshopSupplyLots,
+            WorkshopAggregateKind.SupplyLot, (x, value) => x.AvailableQuantity != value.Stock,
+            (x, value) => x with
+            {
+                AvailableQuantity = value.Stock,
+                Status = value.Stock == 0 ? WorkshopSupplyLotStatus.Empty : WorkshopSupplyLotStatus.Available,
+                Revision = x.Revision + 1
+            }, replay, mismatches, repair, accountId, cancellationToken);
         if (repair && mismatches.Count > 0)
             return await ReconcileAsync(accountId, false, cancellationToken);
 

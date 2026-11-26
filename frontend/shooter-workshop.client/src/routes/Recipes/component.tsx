@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Dialog, EmptyState, PageTitle } from "@morwalpiz/layout";
-import type { WorkshopRecipe } from "@morwalpizvideo/models";
+import type { WorkshopInventory, WorkshopRecipe } from "@morwalpizvideo/models";
 import { Link, useFetcher } from "react-router";
 import { useI18n } from "../../i18n";
 import type { action } from "./action";
@@ -13,17 +13,18 @@ const fields = [
   ["oal", "OAL", "text", false],
   ["bulletWeight", "Bullet weight", "number", false],
   ["bulletForm", "Bullet form", "text", false],
-  ["drawing", "Drawing", "text", false],
-  ["primer", "Primer", "text", false],
-  ["powder", "Powder", "text", false],
   ["powderWeight", "Powder weight", "number", false],
 ] as const;
 
 export default function Recipes({
   recipes,
+  inventory,
+  inventoryLoading = false,
   embedded = false,
 }: {
   recipes: WorkshopRecipe[];
+  inventory: WorkshopInventory | null;
+  inventoryLoading?: boolean;
   embedded?: boolean;
 }) {
   const { t } = useI18n();
@@ -38,13 +39,21 @@ export default function Recipes({
       />}
       <div className="section-heading workspace-action-heading">
         <span />
-        <button className="button button-primary" type="button" onClick={() => setShowForm(true)}>
+        <button className="button button-primary" type="button" disabled={!inventory} onClick={() => setShowForm(true)}>
           + {t("New recipe")}
         </button>
       </div>
-      <Dialog open={showForm} title={t("New recipe")} closeLabel={t("Close")} onClose={() => setShowForm(false)}>
-        <RecipeForm onSaved={() => setShowForm(false)} onCancel={() => setShowForm(false)} />
-      </Dialog>
+      {inventory ? (
+        <Dialog open={showForm} title={t("New recipe")} closeLabel={t("Close")} onClose={() => setShowForm(false)}>
+          <RecipeForm inventory={inventory} onSaved={() => setShowForm(false)} onCancel={() => setShowForm(false)} />
+        </Dialog>
+      ) : (
+        <p className="status-note">
+          {t(inventoryLoading
+            ? "Loading online inventory..."
+            : "Inventory must be available online to edit recipe products.")}
+        </p>
+      )}
       {recipes.length ? (
         <div className="card-grid mt-3">
           {recipes.map((recipe) => (
@@ -85,6 +94,7 @@ export default function Recipes({
       {selectedId && (
         <RecipeDetails
           recipe={recipes.find((item) => item.id === selectedId) ?? null}
+          inventory={inventory}
           onClose={() => setSelectedId(null)}
         />
       )}
@@ -103,10 +113,12 @@ function ActionFeedback({ fetcher }: { fetcher: RecipeFetcher }) {
 
 function RecipeForm({
   recipe,
+  inventory,
   onSaved,
   onCancel,
 }: {
   recipe?: WorkshopRecipe;
+  inventory: WorkshopInventory;
   onSaved?: () => void;
   onCancel?: () => void;
 }) {
@@ -143,6 +155,38 @@ function RecipeForm({
           </label>
         ))}
       </div>
+      <div className="form-grid">
+        <label>
+          {t("Primer product")}
+          <select name="primerProductId" required defaultValue={recipe?.primerProductId ?? ""}>
+            <option value="">{t("Select primer product")}</option>
+            {inventory.products.filter((product) => product.type === "Primer" && !product.archived).map((product) => (
+              <option value={product.id} key={product.id}>
+                {product.name}{product.brand ? ` · ${product.brand}` : ""}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          {t("Powder product")}
+          <select name="powderProductId" required defaultValue={recipe?.powderProductId ?? ""}>
+            <option value="">{t("Select powder product")}</option>
+            {inventory.products.filter((product) => product.type === "Powder" && !product.archived).map((product) => (
+              <option value={product.id} key={product.id}>
+                {product.name}{product.brand ? ` · ${product.brand}` : ""}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+      {(!inventory.products.some((product) => product.type === "Primer" && !product.archived)
+        || !inventory.products.some((product) => product.type === "Powder" && !product.archived)) && (
+        <p className="status-note">
+          {t("Create active primer and powder products before saving this recipe.")}
+          {" "}
+          <Link to="/inventory">{t("Open inventory")}</Link>
+        </p>
+      )}
       <label>
         {t("Notes")}
         <textarea name="notes" defaultValue={recipe?.notes ?? ""} />
@@ -166,9 +210,11 @@ function RecipeForm({
 
 function RecipeDetails({
   recipe,
+  inventory,
   onClose,
 }: {
   recipe: WorkshopRecipe | null;
+  inventory: WorkshopInventory | null;
   onClose: () => void;
 }) {
   const { t } = useI18n();
@@ -179,13 +225,16 @@ function RecipeDetails({
 
   return (
     <Dialog open title={recipe.name} closeLabel={t("Close")} onClose={onClose} className="recipe-dialog">
-        {editing ? (
+      {editing ? inventory ? (
           <RecipeForm
             recipe={recipe}
+            inventory={inventory}
             onSaved={() => setEditing(false)}
             onCancel={() => setEditing(false)}
           />
-        ) : (
+      ) : (
+        <p className="status-note">{t("Inventory must be available online to edit recipe products.")}</p>
+      ) : (
           <>
             <dl className="recipe-detail-grid">
               {fields.map(([name, label]) => (
@@ -194,6 +243,14 @@ function RecipeDetails({
                   <dd>{display(recipe[name])}</dd>
                 </div>
               ))}
+              <div>
+                <dt>{t("Primer")}</dt>
+                <dd>{display(recipe.primer)}</dd>
+              </div>
+              <div>
+                <dt>{t("Powder")}</dt>
+                <dd>{display(recipe.powder)}</dd>
+              </div>
               <div>
                 <dt>{t("Status")}</dt>
                 <dd>{t(recipe.status)}</dd>
@@ -216,6 +273,7 @@ function RecipeDetails({
                 <button
                   type="button"
                   className="button button-primary"
+                  disabled={!inventory}
                   onClick={() => setEditing(true)}
                 >
                   {t("Edit")}
@@ -232,7 +290,7 @@ function RecipeDetails({
               )}
             </div>
           </>
-        )}
+      )}
     </Dialog>
   );
 }

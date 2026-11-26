@@ -1,8 +1,7 @@
 # ADR-022: Startup Bootstrap For Blog Interaction Indexes
 
-- **Status:** Accepted
+- **Status:** Superseded by [ADR-029](ADR-029-nonblocking-mongo-index-startup.md)
 - **Date:** 2026-11-06
-- **Supersedes:** ADR-008 only for the narrowly scoped blog-interaction indexes below
 
 ## Context
 
@@ -75,3 +74,9 @@ Focused tests verify startup-manifest ownership, missing-namespace classificatio
 index definition comparison including partial filters, and both API builds. A
 disposable or deployed Mongo integration test remains necessary to verify the exact
 behavior and permissions of the selected Mongo-compatible provider.
+
+## Supersession
+
+ADR-029 replaces this fail-fast, two-host exception with one non-blocking
+BackOffice initializer for the complete shared-platform index manifest. The
+separate FreezerAnalysis application database remains out of scope.

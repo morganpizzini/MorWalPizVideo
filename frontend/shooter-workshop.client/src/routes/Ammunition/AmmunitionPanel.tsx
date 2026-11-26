@@ -1,78 +1,86 @@
 import { EmptyState } from "@morwalpiz/layout";
-import type { WorkshopAmmunitionBatch, WorkshopRecipe } from "@morwalpizvideo/models";
-import { useFetcher } from "react-router";
-import { useEffect, useRef } from "react";
+import type {
+  WorkshopAmmunitionBatch,
+  WorkshopProductionRecord,
+} from "@morwalpizvideo/models";
+import { useState } from "react";
+import type { ReactNode } from "react";
 import { useI18n } from "../../i18n";
-import { formatNumber, localDateInputValue } from "../../i18n-formatters";
-import type { action } from "./action";
-
-type AmmunitionFetcher = ReturnType<typeof useFetcher<typeof action>>;
-
-function ActionFeedback({ fetcher }: { fetcher: AmmunitionFetcher }) {
-  if (fetcher.state !== "idle" || !fetcher.data) return null;
-  return (
-    <p className={fetcher.data.ok ? "form-success" : "form-error"} role="alert">
-      {fetcher.data.ok ? "Production recorded." : fetcher.data.error}
-    </p>
-  );
-}
+import { formatNumber } from "../../i18n-formatters";
 
 export default function AmmunitionPanel({
-  recipes,
   batches,
-  fetcher,
+  productionRecords,
+  renderProductionEntry,
 }: {
-  recipes: WorkshopRecipe[];
   batches: WorkshopAmmunitionBatch[];
-  fetcher: AmmunitionFetcher;
+  productionRecords: WorkshopProductionRecord[];
+  renderProductionEntry: (
+    record: WorkshopProductionRecord | undefined,
+    minimumQuantity: number,
+    onSaved: () => void,
+    onCancel: () => void,
+  ) => ReactNode;
 }) {
   const { culture, t } = useI18n();
-  const formRef = useRef<HTMLFormElement>(null);
-
-  useEffect(() => {
-    if (fetcher.state === "idle" && fetcher.data?.ok) {
-      formRef.current?.reset();
-    }
-  }, [fetcher.data, fetcher.state]);
+  const [editingRecordId, setEditingRecordId] = useState<string | null>(null);
+  const editingRecord = productionRecords.find((record) => record.session.id === editingRecordId);
+  const consumed = editingRecord
+    ? batches.find((batch) => batch.productionSessionId === editingRecord.session.id)
+    : undefined;
+  const minimumQuantity = consumed
+    ? Math.max(1, consumed.producedQuantity - consumed.onHandQuantity)
+    : 1;
 
   return (
     <>
-      <fetcher.Form ref={formRef} method="post" className="panel form-panel ammunition-production-form">
-        <h2>{t("Record production")}</h2>
-        <div className="ammunition-production-grid">
-          <div className="ammunition-production-primary">
-            <label>
-              {t("Recipe")}
-              <select name="recipeId" required defaultValue="">
-                <option value="">{t("Select recipe")}</option>
-                {recipes.map((recipe) => (
-                  <option value={recipe.id} key={recipe.id}>
-                    {recipe.name} · {recipe.caliber}
-                  </option>
+      {renderProductionEntry(
+        editingRecord,
+        minimumQuantity,
+        () => setEditingRecordId(null),
+        () => setEditingRecordId(null),
+      )}
+      <section className="panel">
+        <h2>{t("Production records")}</h2>
+        {productionRecords.length ? (
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>{t("Production date")}</th>
+                  <th>{t("Recipe")}</th>
+                  <th>{t("Quantity produced")}</th>
+                  <th>{t("Revision")}</th>
+                  <th>{t("Corrections")}</th>
+                  <th>{t("Actions")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {productionRecords.map(({ session, corrections }) => (
+                  <tr key={session.id}>
+                    <td>{new Date(session.productionDate).toLocaleDateString(culture)}</td>
+                    <td>{session.recipeSnapshot.name}</td>
+                    <td>{formatNumber(session.quantityProduced, culture)}</td>
+                    <td>{session.revision}</td>
+                    <td>{corrections.length}</td>
+                    <td>
+                      <button
+                        type="button"
+                        className="button button-quiet"
+                        onClick={() => setEditingRecordId(session.id)}
+                      >
+                        {t("Edit")}
+                      </button>
+                    </td>
+                  </tr>
                 ))}
-              </select>
-            </label>
-            <div className="form-grid">
-              <label>
-                {t("Quantity")}
-                <input type="number" min="1" required name="quantityProduced" defaultValue="0" />
-              </label>
-              <label>
-                {t("Date")}
-                <input type="date" required name="productionDate" defaultValue={localDateInputValue()} />
-              </label>
-            </div>
+              </tbody>
+            </table>
           </div>
-          <label className="ammunition-production-notes">
-            {t("Notes")}
-            <textarea name="notes" />
-          </label>
-        </div>
-        <ActionFeedback fetcher={fetcher} />
-        <button className="button button-primary" disabled={fetcher.state !== "idle"}>
-          {fetcher.state !== "idle" ? t("Saving…") : t("Create batch")}
-        </button>
-      </fetcher.Form>
+        ) : (
+          <EmptyState title={t("No production records")} />
+        )}
+      </section>
       <section className="panel">
         <h2>{t("Produced batches")}</h2>
         {batches.length ? (
@@ -93,9 +101,7 @@ export default function AmmunitionPanel({
                     <td>{batch.id}</td>
                     <td>{batch.recipeSnapshot.caliber}</td>
                     <td>{formatNumber(batch.producedQuantity, culture)}</td>
-                    <td>
-                      <strong>{formatNumber(batch.onHandQuantity, culture)}</strong>
-                    </td>
+                    <td><strong>{formatNumber(batch.onHandQuantity, culture)}</strong></td>
                     <td>{batch.revision}</td>
                   </tr>
                 ))}

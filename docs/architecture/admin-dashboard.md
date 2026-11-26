@@ -73,8 +73,10 @@ save or reset them. Cookie writes retain CSRF protection; responses are no-store
 
 The additive `backofficeQuickActionPreferences` collection has one ordered list
 per user/channel pair. The source-owned unique compound index
-`quickactionpreferences.user_channel.unique` must be applied before production
-exposure; see [Mongo operations](mongo-operations.md#personal-quick-action-rollout).
+`quickactionpreferences.user_channel.unique` is attempted by BackOffice's
+non-blocking startup initializer. Verify its actual state through the audit
+endpoint before relying on uniqueness; startup failure does not block
+production exposure. See [Mongo operations](mongo-operations.md#personal-quick-action-rollout).
 Atomic full-list writes use last-successful-write-wins semantics across devices.
 No backfill, User document update, public API, or cross-API cache purge is needed.
 

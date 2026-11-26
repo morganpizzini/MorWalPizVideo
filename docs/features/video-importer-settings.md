@@ -45,10 +45,12 @@ The old proposal ran no validation; conflicting earlier 9/9/migration notes were
 not proof. Later architecture records **19/19 Windows importer tests** and
 **17/17 focused BackOffice endpoint/index tests**. These were not rerun here.
 
-Still required: live duplicate audit/manual unique channel index verification,
-least-privilege key scopes, existing/missing/error endpoint smoke, clean second-
-workstation restore, restart precedence, offline visible degradation, full
-desktop startup and interactive UI/accessibility.
+Still recommended: live duplicate audit and verification of the unique channel
+index attempted by BackOffice startup, least-privilege key scopes,
+existing/missing/error endpoint smoke, clean second-workstation restore,
+restart precedence, offline visible degradation, full desktop startup and
+interactive UI/accessibility. Missing-index startup does not gate service
+availability.
 Fake/temp SQLite tests must not contact BackOffice/Key Vault/Mongo.
 Retain secret-field exclusion and first-use/cancel/transaction/failure tests.
 
@@ -58,9 +60,10 @@ InsightScanner. Local endpoint/key UI remains local compatibility state.
 
 ## Migration and rollback
 
-Backend -> duplicate audit/manual governed unique index -> channel-key scopes
+Backend -> startup index attempt and operational verification -> channel-key scopes
 -> endpoint verification -> importer. No SQLite migration/backfill is required;
-first successful scoped 204 seeds lazily. Startup does not create this index.
+first successful scoped 204 seeds lazily. Index failure does not block startup;
+the operator audit endpoint reports actual index state.
 The executable Mongo operation allowlist takes precedence over its JSON snapshot.
 
 Old importer remains local-only. Backend rollback leaves new clients visibly

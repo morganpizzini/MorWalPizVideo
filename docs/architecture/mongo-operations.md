@@ -7,10 +7,10 @@ MongoDB is owned and operated by the project owner.
 Source-owned index operations now exist:
 
 - BackOffice API exposes authenticated index operations at `GET /api/mongoindexes/audit`, `POST /api/mongoindexes/apply`, and the explicit legacy-removal route `POST /api/mongoindexes/remove`.
-- ServerAPI and BackOffice automatically verify/create only the new blog-interaction indexes before accepting traffic in Mongo mode. Missing feature collections are created empty before indexes; conflicts and database errors fail startup. Mock mode skips this path. All other indexes continue through explicit reviewed operations; see [ADR-022](adr/ADR-022-startup-blog-index-bootstrap.md).
+- In Mongo mode, BackOffice attempts every index in its executable manifest at startup in a background service, including the blog, Workshop, YouTube, feedback, and blog-interaction definitions and the two BlogRepository indexes. Entries are applied sequentially and audited after each attempt. Failures are logged and do not block startup or readiness; unattempted entries are reported separately. Mock mode skips this path. ServerAPI and ShortLinks do not create or verify indexes at startup. See [ADR-029](adr/ADR-029-nonblocking-mongo-index-startup.md).
 - The executable allowlist in `MongoIndexOperationsService` is the runtime authority for audit/apply/remove operations. The operational file `docs/architecture/operations/mongo-index-manifest.phase4.json` is a phase-4 review snapshot, is not loaded dynamically at runtime, and must not be used for an apply request until it has been reconciled against the executable allowlist.
-- Workshop's five feature-owned index definitions are projected into that executable allowlist from `WorkshopMongoIndexes.Manifest`; the central BackOffice service is an operational audit/apply coupling only. They are not added to the limited startup blog-index bootstrap, and production application still requires duplicate audit and approved apply evidence.
-- ServerAPI and BackOffice automatically verify/create the exact public YouTube-content sort index in Mongo mode before accepting traffic. The prior `isPrivate`-prefixed index remains in the operational manifest for compatibility but does not satisfy the public reader's two-field sort. BackOffice also automatically verifies/creates the feedback creation-order index. These are narrow, non-unique startup exceptions for active readers; unique indexes, TTL indexes, and other manifest entries remain reviewed operations.
+- Automatic startup creation is fail-open. A startup log, health response or API response does not prove that every index exists; use the authenticated audit operation to inspect actual state. Existing Mongo connectivity health checks remain independent and may still report a database outage.
+- The source manifest includes unique and TTL indexes. Missing unique indexes can permit duplicate writes before creation; TTL creation can expire already-expired documents. The owner accepts these risks and will manage logged failures. Review duplicates and TTL effects before a real rollout; startup does not clean data or remove/replace indexes.
 - The canonical operator contract, complete approved request example, authentication requirements, and response handling are documented in `docs/architecture/operations/mongo-index-audits/README.md`.
 - The `videoimportersettings.channelid.unique` index is an additional manual
   rollout prerequisite for VideoImporter synchronization. Follow the
@@ -43,10 +43,10 @@ For manually managed indexes or structural migrations:
 10. Monitor duplicate-key failures, lock/load impact, and storage growth.
 11. Retain compatibility reads until deployed consumers are verified.
 
-Never apply a legacy unique index before duplicate analysis. The ADR-022 startup
-exception is limited to the blog-interaction feature's additive indexes; startup
-never drops/rebuilds indexes or cleans data. A duplicate-data conflict fails startup
-and requires manual review.
+Never apply a legacy unique index before duplicate analysis. ADR-029 makes
+BackOffice attempt the complete shared-platform manifest at startup without
+blocking application traffic. A duplicate-data conflict is logged and requires
+manual review; startup never drops/rebuilds indexes or cleans data.
 
 For `BaseEntity` string IDs, use the repository `GetItemAsync`/`DeleteItemAsync`/`UpdateItemAsync` paths, which select an ObjectId or string `_id` filter. Do not translate an entity `Id` equality expression for externally supplied values because non-ObjectId values can fail BSON serialization before other predicates are evaluated.
 
@@ -103,25 +103,24 @@ BackOffice's personal dashboard actions add the empty
 `ux_quickactionpreferences_user_channel`, unique on `{ "userId": 1, "channelId": 1 }`
 with binary/case-preserving identifiers and no partial filter or TTL.
 
-Use the existing approved API-key operator audit/apply process and backup/
-duplicate-review sequence above. Apply this index after the API artifact exposes
-its manifest entry and before releasing the new SPA or otherwise exposing the
-preference endpoint to clients. Verify the resulting unique definition and record
-redacted environment-specific evidence. Mock tests and a source manifest do not
-prove that MongoDB/Cosmos has applied it or that parallel first writes are safe
-on the deployed provider.
+BackOffice attempts this index through its complete non-blocking startup
+initializer. Use the existing approved API-key audit/apply process and backup/
+duplicate-review sequence above to inspect or remediate it. Verify the actual
+unique definition and record redacted environment-specific evidence; startup
+does not prove MongoDB/Cosmos applied it or that first writes are protected.
+Mock tests and a source manifest do not prove provider behavior.
 
-No existing User/channel document or preference backfill is required. If a
-pre-release instance already inserted duplicate pairs, stop release for explicit
-resolution rather than deleting arbitrary preferences. The repository uses
-pair-keyed atomic upsert with a narrow duplicate-key retry.
+No existing User/channel document or preference backfill is required. Duplicate
+pairs may be accepted while the unique index is absent; later index creation
+will fail until they are explicitly resolved. Do not delete arbitrary
+preferences. The repository uses pair-keyed atomic upsert with a narrow
+duplicate-key retry.
 
 Release API before SPA. Smoke-test authenticated GET, CSRF-protected PUT/DELETE,
 and the same user's second-device read. Routine rollback removes the SPA feature
-first and retains the additive API, collection and index; no removal-manifest
-entry, automatic startup index bootstrap, or collection deletion is introduced.
-Index application and real-provider concurrency verification remain operational
-gates, not changes performed by local feature implementation.
+first and retains the additive API, collection and index; no removal-manifest entry
+or collection deletion is introduced. Index audit and real-provider behavior
+remain operational verification, not application startup or release gates.
 
 ## Canonical Short-Link Migration
 
@@ -131,7 +130,8 @@ gates, not changes performed by local feature implementation.
 4. Create canonical standalone records containing internal references and full validated destinations.
 5. Seed aggregate click totals without double counting.
 6. Deploy canonical-only resolution and management. Embedded YouTube links are not a runtime fallback.
-7. Create the unique normalized-code index.
+7. BackOffice attempts the unique normalized-code index at startup; audit actual
+   state and use approved manual apply only if remediation is needed.
 8. Switch all management writes to the canonical collection.
 9. Observe failed legacy-code requests and reconcile any canonical records that were not created.
 10. Remove or archive embedded YouTube fields only after backup, backfill verification, and rollback approval.

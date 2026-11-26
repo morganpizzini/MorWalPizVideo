@@ -201,9 +201,10 @@ export interface WorkshopRecipe {
   oal?: string | null;
   bulletWeight?: number | null;
   bulletForm?: string | null;
-  drawing?: string | null;
   primer?: string | null;
+  primerProductId?: string | null;
   powder?: string | null;
+  powderProductId?: string | null;
   powderWeight?: number | null;
   notes?: string | null;
   status: "Active" | "Archived";
@@ -241,9 +242,10 @@ export interface WorkshopRecipeSnapshot {
   oal?: string | null;
   bulletWeight?: number | null;
   bulletForm?: string | null;
-  drawing?: string | null;
   primer?: string | null;
+  primerProductId?: string | null;
   powder?: string | null;
+  powderProductId?: string | null;
   powderWeight?: number | null;
   notes?: string | null;
   version: number;
@@ -255,14 +257,197 @@ export interface WorkshopOperationContract {
   effectiveAt: string;
   recordedAt: string;
   contributionDigest: string;
+  idempotent?: boolean;
+}
+
+export interface WorkshopProductionMutationContract extends WorkshopOperationContract {
+  session: WorkshopProductionSession;
+  batch: WorkshopAmmunitionBatch;
+}
+
+export interface WorkshopProductionCorrectionContract {
+  operationId: string;
+  recordedAt: string;
+  correction: {
+    expectedRevision: number;
+    previousProductionDate: string;
+    previousQuantity: number;
+    previousBulletProductId: string;
+    previousNotes?: string | null;
+    previousPrimerLotAllocations: WorkshopProductionLotAllocation[];
+    previousBulletLotAllocations: WorkshopProductionLotAllocation[];
+    productionDate: string;
+    quantity: number;
+    bulletProductId: string;
+    notes?: string | null;
+    primerLotAllocations: WorkshopProductionLotAllocation[];
+    bulletLotAllocations: WorkshopProductionLotAllocation[];
+  };
+}
+
+export interface WorkshopProductionRecord {
+  session: WorkshopProductionSession;
+  corrections: WorkshopProductionCorrectionContract[];
+  projectionPending: boolean;
 }
 
 export interface CreateWorkshopProductionRequest {
   recipeId: string;
   productionDate: string;
   quantityProduced: number;
+  bulletProductId: string;
+  primerLotAllocations: WorkshopProductionLotAllocation[];
+  bulletLotAllocations: WorkshopProductionLotAllocation[];
   notes?: string | null;
   idempotencyKey: string;
+}
+
+export interface WorkshopProductionLotAllocation {
+  lotId: string;
+  quantity: number;
+  lotRevision?: number;
+}
+
+export interface UpdateWorkshopProductionRequest extends CreateWorkshopProductionRequest {
+  expectedRevision: number;
+}
+
+export interface WorkshopProductionSession {
+  id: string;
+  accountId: string;
+  recipeId: string;
+  recipeSnapshot: WorkshopRecipeSnapshot;
+  productionDate: string;
+  quantityProduced: number;
+  batchId: string;
+  bulletProductId: string;
+  primerLotAllocations: WorkshopProductionLotAllocation[];
+  bulletLotAllocations: WorkshopProductionLotAllocation[];
+  revision: number;
+  notes?: string | null;
+}
+
+export type WorkshopInventoryProductType =
+  | "Primer"
+  | "Bullet"
+  | "Powder"
+  | "Case"
+  | "CommercialAmmunition";
+
+export type WorkshopInventoryLotStatus = "Available" | "Empty";
+
+export interface WorkshopInventoryProduct {
+  id: string;
+  type: WorkshopInventoryProductType;
+  brand?: string | null;
+  name: string;
+  archived: boolean;
+}
+
+export interface CreateWorkshopInventoryProductRequest {
+  type: WorkshopInventoryProductType;
+  brand?: string | null;
+  name: string;
+  idempotencyKey: string;
+}
+
+export interface WorkshopInventoryLot {
+  id: string;
+  productId: string;
+  purchaseDate: string;
+  purchasedQuantity: number;
+  availableQuantity: number;
+  totalPrice: number;
+  currency: string;
+  isEmpty: boolean;
+  itemCount?: number | null;
+  revision: number;
+}
+
+export interface CreateWorkshopInventoryPurchaseRequest {
+  productId: string;
+  purchaseDate: string;
+  quantity: number;
+  totalPrice: number;
+  currency: string;
+  idempotencyKey: string;
+}
+
+export interface WorkshopInventoryPurchase {
+  id: string;
+  productId: string;
+  purchaseDate: string;
+  quantity: number;
+  totalPrice: number;
+  currency: string;
+  lots: WorkshopInventoryLot[];
+}
+
+export interface AdjustWorkshopInventoryLotRequest {
+  lotId: string;
+  physicalCount: number;
+  reason: string;
+  expectedRevision: number;
+  idempotencyKey: string;
+}
+
+export interface SetWorkshopInventoryLotStatusRequest {
+  isEmpty: boolean;
+  expectedRevision: number;
+  idempotencyKey: string;
+}
+
+export interface WorkshopCurrencyTotal {
+  currency: string;
+  total: number;
+}
+
+export interface RecordWorkshopComponentPurchaseRequest {
+  purchaseDate: string;
+  totalPrice: number;
+  currency: string;
+  idempotencyKey: string;
+}
+
+export interface CorrectWorkshopComponentPurchaseRequest
+  extends RecordWorkshopComponentPurchaseRequest {
+  expectedRevision: number;
+  reason: string;
+}
+
+export interface WorkshopComponentPurchaseRevision {
+  revision: number;
+  purchaseDate: string;
+  totalPrice: number;
+  currency: string;
+  reason?: string | null;
+  recordedAt: string;
+}
+
+export interface WorkshopComponentPurchase {
+  id: string;
+  componentId: string;
+  purchaseDate: string;
+  totalPrice: number;
+  currency: string;
+  revision: number;
+  history: WorkshopComponentPurchaseRevision[];
+}
+
+export interface WorkshopInventory {
+  products: WorkshopInventoryProduct[];
+  lots: WorkshopInventoryLot[];
+  componentPurchases: WorkshopComponentPurchase[];
+  spending: WorkshopCurrencyTotal[];
+  partialConsumptionCosts: WorkshopCurrencyTotal[];
+  missingComponentPrices: string[];
+}
+
+export interface WorkshopInventorySummary {
+  productCount: number;
+  availableLotCount: number;
+  primerUnitsAvailable: number;
+  bulletUnitsAvailable: number;
 }
 
 export interface WorkshopConsumptionRequest {
