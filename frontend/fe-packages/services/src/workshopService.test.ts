@@ -123,6 +123,46 @@ describe("Workshop account transport", () => {
     );
   });
 
+  it("normalizes the server's lower-case supply types and defaults missing capabilities", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(Response.json({
+      products: [
+        { id: "primer", type: "primer", name: "Primer", archived: false },
+        { id: "bullet", type: "bullet", name: "Bullet", archived: false },
+        { id: "powder", type: "powder", name: "Powder", archived: false },
+        { id: "case", type: "case", name: "Case", archived: false },
+        { id: "ammo", type: "commercialAmmunition", name: "Ammo", archived: false },
+      ],
+      lots: [],
+      componentPurchases: [],
+      spending: [],
+      partialConsumptionCosts: [],
+      missingComponentPrices: [],
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const inventory = await getWorkshopInventory();
+
+    expect(inventory.products.map((product) => product.type)).toEqual([
+      "Primer", "Bullet", "Powder", "Case", "CommercialAmmunition",
+    ]);
+    expect(inventory.products.every((product) => product.revision === 0)).toBe(true);
+    expect(inventory.supportsPackageQuantities).toBe(false);
+    expect(inventory.supportsProductManagement).toBe(false);
+  });
+
+  it("rejects unknown supply type strings instead of silently casting them", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(Response.json({
+      products: [{ id: "unknown", type: "Misc", name: "Unknown", archived: false }],
+      lots: [],
+      componentPurchases: [],
+      spending: [],
+      partialConsumptionCosts: [],
+      missingComponentPrices: [],
+    })));
+
+    await expect(getWorkshopInventory()).rejects.toThrow("Unsupported Workshop supply product type: Misc");
+  });
+
   it("updates a production record with its expected revision and selected lot allocations", async () => {
     const fetchMock = vi.fn((input: RequestInfo | URL) =>
       Promise.resolve(

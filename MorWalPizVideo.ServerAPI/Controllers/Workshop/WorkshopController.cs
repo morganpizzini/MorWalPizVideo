@@ -158,15 +158,14 @@ public sealed class WorkshopController(WorkshopService service, IPublicAccountSe
     {
         var inventory = await service.GetInventoryAsync(AccountId(), ct);
         return Ok(new WorkshopInventoryContract(
-            inventory.Products.Select(x => new WorkshopInventoryProductContract(
-                x.Id, SupplyTypeName(x.Type), x.Brand, x.Name, x.Archived)).ToArray(),
-            inventory.Lots.Select(x => new WorkshopInventoryLotContract(
-                x.Id, x.ProductId, x.PurchasedAt, x.PurchasedQuantity, x.AvailableQuantity,
-                x.TotalPrice, x.Currency, x.Status == WorkshopSupplyLotStatus.Empty, x.ItemCount, x.Revision)).ToArray(),
+            inventory.Products.Select(ToInventoryProductContract).ToArray(),
+            inventory.Lots.Select(ToInventoryLotContract).ToArray(),
             inventory.ComponentPurchases.Select(ToComponentPurchaseContract).ToArray(),
             inventory.Spending.Select(x => new WorkshopCurrencyTotalContract(x.Currency, x.Total)).ToArray(),
             inventory.PartialConsumptionCosts.Select(x => new WorkshopCurrencyTotalContract(x.Currency, x.Total)).ToArray(),
-            inventory.MissingComponentPrices));
+            inventory.MissingComponentPrices,
+            SupportsPackageQuantities: true,
+            SupportsProductManagement: true));
     }
 
     [HttpPost("inventory/products")]
@@ -177,8 +176,52 @@ public sealed class WorkshopController(WorkshopService service, IPublicAccountSe
         {
             var product = await service.CreateSupplyProductAsync(AccountId(), request.Type, request.Brand,
                 request.Name, request.IdempotencyKey, ct);
-            return Ok(new WorkshopInventoryProductContract(
-                product.Id, SupplyTypeName(product.Type), product.Brand, product.Name, product.Archived));
+            return Ok(ToInventoryProductContract(product));
+        }
+        catch (WorkshopValidationException ex) { return ValidationProblem(ex.Message); }
+        catch (WorkshopConflictException ex) { return Conflict(new ProblemDetails { Title = ex.Message }); }
+    }
+
+    [HttpPut("inventory/products/{productId}")]
+    public async Task<IActionResult> UpdateSupplyProduct(
+        string productId, UpdateWorkshopSupplyProductRequest request, CancellationToken ct)
+    {
+        if (!HasCsrf()) return CsrfFailure();
+        try
+        {
+            var product = await service.UpdateSupplyProductAsync(AccountId(), productId,
+                request.Brand, request.Name, request.ExpectedRevision, request.IdempotencyKey, ct);
+            return Ok(ToInventoryProductContract(product));
+        }
+        catch (WorkshopValidationException ex) { return ValidationProblem(ex.Message); }
+        catch (WorkshopConflictException ex) { return Conflict(new ProblemDetails { Title = ex.Message }); }
+    }
+
+    [HttpPost("inventory/products/{productId}/archive")]
+    public async Task<IActionResult> SetSupplyProductArchived(
+        string productId, SetWorkshopSupplyProductArchivedRequest request, CancellationToken ct)
+    {
+        if (!HasCsrf()) return CsrfFailure();
+        try
+        {
+            var product = await service.SetSupplyProductArchivedAsync(AccountId(), productId,
+                request.Archived, request.ExpectedRevision, request.IdempotencyKey, ct);
+            return Ok(ToInventoryProductContract(product));
+        }
+        catch (WorkshopValidationException ex) { return ValidationProblem(ex.Message); }
+        catch (WorkshopConflictException ex) { return Conflict(new ProblemDetails { Title = ex.Message }); }
+    }
+
+    [HttpPost("inventory/products/{productId}/delete")]
+    public async Task<IActionResult> DeleteSupplyProduct(
+        string productId, DeleteWorkshopSupplyProductRequest request, CancellationToken ct)
+    {
+        if (!HasCsrf()) return CsrfFailure();
+        try
+        {
+            await service.DeleteSupplyProductAsync(AccountId(), productId,
+                request.ExpectedRevision, request.IdempotencyKey, ct);
+            return NoContent();
         }
         catch (WorkshopValidationException ex) { return ValidationProblem(ex.Message); }
         catch (WorkshopConflictException ex) { return Conflict(new ProblemDetails { Title = ex.Message }); }
@@ -191,18 +234,19 @@ public sealed class WorkshopController(WorkshopService service, IPublicAccountSe
         try
         {
             var result = await service.RecordSupplyPurchaseAsync(AccountId(), request.ProductId, request.PurchaseDate,
-                request.Quantity, request.TotalPrice, request.Currency, request.IdempotencyKey, ct);
+                request.Quantity, request.PackageCount, request.UnitsPerPackage,
+                request.TotalPrice, request.Currency, request.IdempotencyKey, ct);
             return Ok(new
             {
                 id = result.Purchase.Id,
                 productId = result.Purchase.ProductId,
                 purchaseDate = result.Purchase.PurchasedAt,
                 quantity = result.Purchase.Quantity,
+                packageCount = result.Purchase.PackageCount,
+                unitsPerPackage = result.Purchase.UnitsPerPackage,
                 totalPrice = result.Purchase.TotalPrice,
                 currency = result.Purchase.Currency,
-                lots = result.Lots.Select(x => new WorkshopInventoryLotContract(
-                    x.Id, x.ProductId, x.PurchasedAt, x.PurchasedQuantity, x.AvailableQuantity,
-                    x.TotalPrice, x.Currency, x.Status == WorkshopSupplyLotStatus.Empty, x.ItemCount, x.Revision)).ToArray()
+                lots = result.Lots.Select(ToInventoryLotContract).ToArray()
             });
         }
         catch (WorkshopValidationException ex) { return ValidationProblem(ex.Message); }
@@ -606,9 +650,12 @@ public sealed class WorkshopController(WorkshopService service, IPublicAccountSe
             request.RecipeVersion, request.BulletProductId,
             request.PrimerLotAllocations.Select(x => new WorkshopProductionSelection(x.LotId, x.Quantity)).ToArray(),
             request.BulletLotAllocations.Select(x => new WorkshopProductionSelection(x.LotId, x.Quantity)).ToArray());
+    private static WorkshopInventoryProductContract ToInventoryProductContract(WorkshopSupplyProduct product) =>
+        new(product.Id, SupplyTypeName(product.Type), product.Brand, product.Name, product.Archived, product.Revision);
     private static WorkshopInventoryLotContract ToInventoryLotContract(WorkshopSupplyLot lot) =>
         new(lot.Id, lot.ProductId, lot.PurchasedAt, lot.PurchasedQuantity, lot.AvailableQuantity,
-            lot.TotalPrice, lot.Currency, lot.Status == WorkshopSupplyLotStatus.Empty, lot.ItemCount, lot.Revision);
+            lot.TotalPrice, lot.Currency, lot.Status == WorkshopSupplyLotStatus.Empty, lot.ItemCount, lot.Revision,
+            lot.PackageCount, lot.UnitsPerPackage);
     private static WorkshopComponentPurchaseContract ToComponentPurchaseContract(WorkshopComponentPurchase purchase) =>
         new(purchase.Id, purchase.ComponentId, purchase.PurchaseDate, purchase.TotalPrice,
             purchase.Currency, purchase.Revision, purchase.History);

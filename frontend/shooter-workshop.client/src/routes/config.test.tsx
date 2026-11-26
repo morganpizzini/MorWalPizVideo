@@ -3,7 +3,8 @@ import { routes } from "./config";
 
 describe("Workshop route configuration", () => {
   it("keeps account registration and legal pages outside the protected shell", () => {
-    expect(routes.find((route) => route.path === "/account/register")?.element).toBeTruthy();
+    expect(routes.find((route) => route.path === "/account/login")?.lazy).toBeTypeOf("function");
+    expect(routes.find((route) => route.path === "/account/register")?.lazy).toBeTypeOf("function");
     expect(routes.find((route) => route.path === "/privacy")?.element).toBeTruthy();
     expect(routes.find((route) => route.path === "/terms")?.element).toBeTruthy();
     expect(routes.find((route) => route.path === "/cookie-policy")?.element).toBeTruthy();
@@ -33,28 +34,33 @@ describe("Workshop route configuration", () => {
       "*",
     ]);
     const componentsRoute = shellRoute?.children?.find((route) => route.path === "components");
-    expect(componentsRoute?.loader).toBeTypeOf("function");
+    expect(componentsRoute?.lazy).toBeTypeOf("function");
+    expect(componentsRoute?.loader).toBeUndefined();
     expect(componentsRoute?.action).toBeUndefined();
     expect(componentsRoute?.element).toBeUndefined();
     const ammunitionRoute = shellRoute?.children?.find((route) => route.path === "ammunition");
-    expect(ammunitionRoute?.loader).toBeTypeOf("function");
-    expect(ammunitionRoute?.action).toBeTypeOf("function");
+    expect(ammunitionRoute?.lazy).toBeTypeOf("function");
+    expect(ammunitionRoute?.loader).toBeUndefined();
+    expect(ammunitionRoute?.action).toBeUndefined();
     const productionRoute = shellRoute?.children?.find((route) => route.path === "production");
     expect(productionRoute?.element).toBeTruthy();
     expect(productionRoute?.loader).toBeUndefined();
     expect(productionRoute?.action).toBeUndefined();
     const inventoryRoute = shellRoute?.children?.find((route) => route.path === "inventory");
-    expect(inventoryRoute?.loader).toBeTypeOf("function");
-    expect(inventoryRoute?.action).toBeTypeOf("function");
+    expect(inventoryRoute?.lazy).toBeTypeOf("function");
+    expect(inventoryRoute?.loader).toBeUndefined();
+    expect(inventoryRoute?.action).toBeUndefined();
     for (const path of ["firearms", "sessions/shooting", "history", "integrity"]) {
       const route = shellRoute?.children?.find((candidate) => candidate.path === path);
-      expect(route?.loader, `${path} loader`).toBeTypeOf("function");
+      expect(route?.lazy, `${path} lazy resolver`).toBeTypeOf("function");
+      expect(route?.loader, `${path} eager loader`).toBeUndefined();
     }
     const firearmsRoute = shellRoute?.children?.find((route) => route.path === "firearms");
-    expect(firearmsRoute?.action).toBeTypeOf("function");
-    expect(firearmsRoute?.shouldRevalidate).toBeTypeOf("function");
+    expect(firearmsRoute?.lazy).toBeTypeOf("function");
+    expect(firearmsRoute?.action).toBeUndefined();
+    expect(firearmsRoute?.shouldRevalidate).toBeUndefined();
     expect(shellRoute?.children?.find((route) => route.path === "maintenance")?.element).toBeTruthy();
-    expect(shellRoute?.children?.find((route) => route.path === "sessions/shooting")?.action).toBeTypeOf("function");
-    expect(shellRoute?.children?.find((route) => route.path === "integrity")?.action).toBeTypeOf("function");
+    expect(shellRoute?.children?.find((route) => route.path === "sessions/shooting")?.lazy).toBeTypeOf("function");
+    expect(shellRoute?.children?.find((route) => route.path === "integrity")?.lazy).toBeTypeOf("function");
   });
 });

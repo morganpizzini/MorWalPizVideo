@@ -25,6 +25,9 @@ public sealed record WorkshopProductionEditCommand(
 
 public sealed partial class WorkshopService
 {
+    private const long MaximumSafeJavaScriptInteger = 9_007_199_254_740_991;
+    private const long MaximumPackageCount = 10_000;
+
     public async Task<IReadOnlyList<WorkshopProductionRecordData>> GetProductionRecordsAsync(
         string accountId, CancellationToken ct = default)
     {
@@ -172,11 +175,185 @@ public sealed partial class WorkshopService
         return product;
     }
 
+    public async Task<WorkshopSupplyProduct> UpdateSupplyProductAsync(
+        string accountId, string productId, string? brand, string name, long expectedRevision,
+        string idempotencyKey, CancellationToken ct = default)
+    {
+        RequireText(name, "Product name", 160);
+        RequireText(idempotencyKey, "Idempotency key", 80);
+        idempotencyKey = idempotencyKey.Trim();
+        var product = await repository.GetAsync<WorkshopSupplyProduct>(
+            DbCollections.WorkshopSupplyProducts, accountId, productId, ct)
+            ?? throw new WorkshopValidationException("Supply product was not found.");
+        var normalizedBrand = Trim(brand);
+        var normalizedName = name.Trim();
+        var payload = JsonSerializer.Serialize(new
+        {
+            productId, brand = normalizedBrand, name = normalizedName, expectedRevision
+        });
+        var sources = new[] { productId };
+        var existing = await repository.FindOperationAsync(accountId, idempotencyKey, ct);
+        if (existing is not null)
+        {
+            if (existing.OperationType != WorkshopOperationType.SupplyProductUpdated ||
+                existing.PayloadHash != PayloadHash(WorkshopOperationType.SupplyProductUpdated,
+                    existing.Deltas, existing.SourceEntityIds, payload, null))
+                throw new WorkshopConflictException("Idempotency key was already used for a different operation.");
+            await CommitAsync(accountId, idempotencyKey, WorkshopOperationType.SupplyProductUpdated,
+                existing.EffectiveAt, existing.Deltas, existing.SourceEntityIds, payload, ct);
+            product = await repository.GetAsync<WorkshopSupplyProduct>(
+                DbCollections.WorkshopSupplyProducts, accountId, productId, ct)
+                ?? throw new WorkshopConflictException("Supply product could not be recovered.");
+            if (product.Revision > expectedRevision)
+                return product.Brand == normalizedBrand && product.Name == normalizedName
+                    ? product
+                    : throw new WorkshopConflictException("Supply product was changed again after this update.");
+        }
+        else if (product.Revision != expectedRevision)
+            throw new WorkshopConflictException("Supply product changed. Reload before updating.");
+
+        var updated = product with
+        {
+            Brand = normalizedBrand,
+            Name = normalizedName,
+            Revision = product.Revision + 1
+        };
+        if (existing is null)
+            await CommitAsync(accountId, idempotencyKey, WorkshopOperationType.SupplyProductUpdated,
+                Now(), [], sources, payload, ct);
+        if (!await repository.ReplaceAsync(DbCollections.WorkshopSupplyProducts,
+                updated, accountId, product.Revision, ct))
+            throw new WorkshopConflictException("Supply product changed while updating it.");
+        return updated;
+    }
+
+    public async Task<WorkshopSupplyProduct> SetSupplyProductArchivedAsync(
+        string accountId, string productId, bool archived, long expectedRevision,
+        string idempotencyKey, CancellationToken ct = default)
+    {
+        RequireText(idempotencyKey, "Idempotency key", 80);
+        idempotencyKey = idempotencyKey.Trim();
+        var product = await repository.GetAsync<WorkshopSupplyProduct>(
+            DbCollections.WorkshopSupplyProducts, accountId, productId, ct)
+            ?? throw new WorkshopValidationException("Supply product was not found.");
+        var payload = JsonSerializer.Serialize(new { productId, archived, expectedRevision });
+        var sources = new[] { productId };
+        var operationType = archived
+            ? WorkshopOperationType.SupplyProductArchived
+            : WorkshopOperationType.SupplyProductUpdated;
+        var existing = await repository.FindOperationAsync(accountId, idempotencyKey, ct);
+        if (existing is not null)
+        {
+            if (existing.OperationType != operationType ||
+                existing.PayloadHash != PayloadHash(operationType, existing.Deltas,
+                    existing.SourceEntityIds, payload, null))
+                throw new WorkshopConflictException("Idempotency key was already used for a different operation.");
+            await CommitAsync(accountId, idempotencyKey, operationType,
+                existing.EffectiveAt, existing.Deltas, existing.SourceEntityIds, payload, ct);
+            product = await repository.GetAsync<WorkshopSupplyProduct>(
+                DbCollections.WorkshopSupplyProducts, accountId, productId, ct)
+                ?? throw new WorkshopConflictException("Supply product could not be recovered.");
+            if (product.Archived == archived && product.Revision > expectedRevision) return product;
+        }
+        else if (product.Revision != expectedRevision)
+            throw new WorkshopConflictException("Supply product changed. Reload before updating it.");
+
+        if (product.Archived == archived) return product;
+        var updated = product with { Archived = archived, Revision = product.Revision + 1 };
+        if (existing is null)
+            await CommitAsync(accountId, idempotencyKey, operationType,
+                Now(), [], sources, payload, ct);
+        if (!await repository.ReplaceAsync(DbCollections.WorkshopSupplyProducts,
+                updated, accountId, product.Revision, ct))
+            throw new WorkshopConflictException("Supply product changed while updating it.");
+        return updated;
+    }
+
+    public async Task DeleteSupplyProductAsync(
+        string accountId, string productId, long expectedRevision,
+        string idempotencyKey, CancellationToken ct = default)
+    {
+        RequireText(idempotencyKey, "Idempotency key", 80);
+        idempotencyKey = idempotencyKey.Trim();
+        var payload = JsonSerializer.Serialize(new { productId, expectedRevision });
+        var sources = new[] { productId };
+        var existing = await repository.FindOperationAsync(accountId, idempotencyKey, ct);
+        if (existing is not null &&
+            (existing.OperationType != WorkshopOperationType.SupplyProductDeleted ||
+             existing.PayloadHash != PayloadHash(WorkshopOperationType.SupplyProductDeleted,
+                 existing.Deltas, existing.SourceEntityIds, payload, null)))
+            throw new WorkshopConflictException("Idempotency key was already used for a different operation.");
+
+        var product = await repository.GetAsync<WorkshopSupplyProduct>(
+            DbCollections.WorkshopSupplyProducts, accountId, productId, ct);
+        if (product is null)
+        {
+            if (existing is not null) return;
+            throw new WorkshopValidationException("Supply product was not found.");
+        }
+        if (product.Revision != expectedRevision)
+            throw new WorkshopConflictException("Supply product changed. Reload before deleting it.");
+        if (await HasSupplyProductReferencesAsync(accountId, productId, ct))
+            throw new WorkshopConflictException("This product has purchase or recipe history. Archive it instead.");
+
+        if (existing is null)
+            await CommitAsync(accountId, idempotencyKey, WorkshopOperationType.SupplyProductDeleted,
+                Now(), [], sources, payload, ct);
+        if (!await repository.DeleteAsync<WorkshopSupplyProduct>(
+                DbCollections.WorkshopSupplyProducts, accountId, productId, expectedRevision, ct))
+            throw new WorkshopConflictException("Supply product changed while deleting it.");
+    }
+
+    private async Task<bool> HasSupplyProductReferencesAsync(
+        string accountId, string productId, CancellationToken ct)
+    {
+        var purchases = await repository.ListAsync<WorkshopSupplyPurchase>(
+            DbCollections.WorkshopSupplyPurchases, accountId, ct);
+        if (purchases.Any(x => x.ProductId == productId)) return true;
+        var lots = await repository.ListAsync<WorkshopSupplyLot>(DbCollections.WorkshopSupplyLots, accountId, ct);
+        if (lots.Any(x => x.ProductId == productId)) return true;
+        var recipes = await repository.ListAsync<AmmoRecipe>(DbCollections.WorkshopRecipes, accountId, ct);
+        if (recipes.Any(x => x.PrimerProductId == productId || x.PowderProductId == productId)) return true;
+        var recipeVersions = await repository.ListAsync<AmmoRecipeVersion>(
+            DbCollections.WorkshopRecipeVersions, accountId, ct);
+        if (recipeVersions.Any(x =>
+                x.Snapshot.PrimerProductId == productId || x.Snapshot.PowderProductId == productId))
+            return true;
+        var sessions = await repository.ListAsync<ProductionSession>(
+            DbCollections.WorkshopProductionSessions, accountId, ct);
+        if (sessions.Any(x => x.BulletProductId == productId ||
+                x.RecipeSnapshot.PrimerProductId == productId ||
+                x.RecipeSnapshot.PowderProductId == productId))
+            return true;
+        var batches = await repository.ListAsync<AmmoBatch>(DbCollections.WorkshopAmmoBatches, accountId, ct);
+        if (batches.Any(x => x.BulletProductId == productId ||
+                x.RecipeSnapshot.PrimerProductId == productId ||
+                x.RecipeSnapshot.PowderProductId == productId))
+            return true;
+        var operations = await repository.ListAsync<WorkshopOperation>(DbCollections.WorkshopOperations, accountId, ct);
+        return operations.Any(x =>
+            x.OperationType is not (WorkshopOperationType.SupplyProductCreated or
+                WorkshopOperationType.SupplyProductUpdated or WorkshopOperationType.SupplyProductArchived or
+                WorkshopOperationType.SupplyProductDeleted) &&
+            (x.SourceEntityIds.Contains(productId, StringComparer.Ordinal) ||
+             x.InventoryFacts.Any(fact => fact.ProductId == productId) ||
+             x.ProductionSnapshot is { } snapshot &&
+                 (snapshot.PrimerProductId == productId || snapshot.PowderProductId == productId) ||
+             x.ProductionCorrection is { } correction &&
+                 (correction.PreviousBulletProductId == productId || correction.BulletProductId == productId)));
+    }
+
     public async Task<(WorkshopSupplyPurchase Purchase, IReadOnlyList<WorkshopSupplyLot> Lots)> RecordSupplyPurchaseAsync(
         string accountId, string productId, DateTime purchaseDate, long quantity, decimal totalPrice,
-        string currency, string idempotencyKey, CancellationToken ct = default)
+        string currency, string idempotencyKey, CancellationToken ct = default) =>
+        await RecordSupplyPurchaseAsync(accountId, productId, purchaseDate, quantity, null, null,
+            totalPrice, currency, idempotencyKey, ct);
+
+    public async Task<(WorkshopSupplyPurchase Purchase, IReadOnlyList<WorkshopSupplyLot> Lots)> RecordSupplyPurchaseAsync(
+        string accountId, string productId, DateTime purchaseDate, long? quantity,
+        long? packageCount, long? unitsPerPackage, decimal totalPrice, string currency,
+        string idempotencyKey, CancellationToken ct = default)
     {
-        if (quantity is < 1 or > 10000) throw new WorkshopValidationException("Purchase quantity must be between 1 and 10000.");
         ValidateMoney(totalPrice, currency);
         RequireText(idempotencyKey, "Idempotency key", 80);
         idempotencyKey = idempotencyKey.Trim();
@@ -184,37 +361,72 @@ public sealed partial class WorkshopService
         var product = await repository.GetAsync<WorkshopSupplyProduct>(DbCollections.WorkshopSupplyProducts, accountId, productId, ct)
             ?? throw new WorkshopValidationException("Supply product was not found.");
         if (product.Archived) throw new WorkshopValidationException("Archived products cannot be purchased.");
+        var packageAware = packageCount.HasValue || unitsPerPackage.HasValue;
+        long purchasedQuantity;
+        long purchaseQuantity;
+        if (packageAware)
+        {
+            if (product.Type is not (WorkshopSupplyType.Primer or WorkshopSupplyType.Bullet))
+                throw new WorkshopValidationException("Package sizes are only supported for primer and bullet purchases.");
+            if (quantity.HasValue || !packageCount.HasValue || !unitsPerPackage.HasValue ||
+                packageCount is < 1 or > MaximumPackageCount || unitsPerPackage is < 1)
+                throw new WorkshopValidationException("Enter a package count and positive units per package.");
+            try
+            {
+                purchasedQuantity = checked(packageCount.Value * unitsPerPackage.Value);
+            }
+            catch (OverflowException)
+            {
+                throw new WorkshopValidationException("The total number of purchased units is too large.");
+            }
+            if (purchasedQuantity > MaximumSafeJavaScriptInteger)
+                throw new WorkshopValidationException("The total number of purchased units is too large.");
+            purchaseQuantity = packageCount.Value;
+        }
+        else
+        {
+            if (quantity is < 1 or > MaximumPackageCount)
+                throw new WorkshopValidationException("Purchase quantity must be between 1 and 10000.");
+            purchaseQuantity = quantity.Value;
+            purchasedQuantity = quantity.Value;
+        }
 
         var purchaseId = StableId(accountId, idempotencyKey, "supply-purchase");
         var packageLots = product.Type is WorkshopSupplyType.Powder or WorkshopSupplyType.CommercialAmmunition;
-        var lotCount = packageLots ? checked((int)quantity) : 1;
+        var lotCount = packageLots ? checked((int)purchaseQuantity) : 1;
         var lotIds = Enumerable.Range(0, lotCount)
             .Select(index => StableId(accountId, idempotencyKey, $"supply-lot-{index}")).ToArray();
         var purchase = new WorkshopSupplyPurchase
         {
             Id = purchaseId, AccountId = accountId, ProductId = productId, PurchasedAt = purchaseDate,
-            Quantity = quantity, TotalPrice = totalPrice, Currency = currency, LotIds = lotIds,
+            Quantity = purchasedQuantity, TotalPrice = totalPrice, Currency = currency, LotIds = lotIds,
+            PackageCount = packageAware ? packageCount : null,
+            UnitsPerPackage = packageAware ? unitsPerPackage : null,
             CreationDateTime = Now()
         };
         var perPackage = packageLots
-            ? decimal.Round(totalPrice / quantity, 2, MidpointRounding.AwayFromZero)
+            ? decimal.Round(totalPrice / purchaseQuantity, 2, MidpointRounding.AwayFromZero)
             : totalPrice;
         var lots = lotIds.Select((lotId, index) =>
         {
             var lotPrice = packageLots && index == lotIds.Length - 1
-                ? totalPrice - perPackage * (quantity - 1)
+                ? totalPrice - perPackage * (purchaseQuantity - 1)
                 : perPackage;
-            var lotQuantity = packageLots ? 1 : quantity;
+            var lotQuantity = packageLots ? 1 : purchasedQuantity;
             return new WorkshopSupplyLot
             {
                 Id = lotId, AccountId = accountId, PurchaseId = purchaseId, ProductId = productId,
                 PurchasedAt = purchaseDate, PurchasedQuantity = lotQuantity, AvailableQuantity = 0,
                 TotalPrice = lotPrice, Currency = currency, Status = WorkshopSupplyLotStatus.Available,
                 ItemCount = product.Type == WorkshopSupplyType.Case ? lotQuantity : null,
+                PackageCount = packageAware ? packageCount : null,
+                UnitsPerPackage = packageAware ? unitsPerPackage : null,
                 CreationDateTime = Now()
             };
         }).ToArray();
-        var payload = JsonSerializer.Serialize(new { productId, purchaseDate, quantity, totalPrice, currency });
+        var payload = packageAware
+            ? JsonSerializer.Serialize(new { productId, purchaseDate, packageCount, unitsPerPackage, totalPrice, currency })
+            : JsonSerializer.Serialize(new { productId, purchaseDate, quantity = purchaseQuantity, totalPrice, currency });
         var deltas = lots.Select(x => new WorkshopDelta(
             WorkshopAggregateKind.SupplyLot, x.Id, StockDelta: x.PurchasedQuantity)).ToArray();
         var sources = new[] { purchaseId }.Concat(lotIds).Append(productId).ToArray();
@@ -380,13 +592,15 @@ public sealed partial class WorkshopService
 
     public async Task<WorkshopComponentPurchase> CorrectComponentPurchaseAsync(
         string accountId, string componentId, DateTime purchaseDate, decimal totalPrice, string currency,
-        long expectedRevision, string reason, string idempotencyKey, CancellationToken ct = default)
+        long expectedRevision, string? reason, string idempotencyKey, CancellationToken ct = default)
     {
         _ = await repository.GetAsync<ComponentInstance>(
             DbCollections.WorkshopComponentInstances, accountId, componentId, ct)
             ?? throw new WorkshopValidationException("Component was not found.");
         ValidateMoney(totalPrice, currency);
-        RequireText(reason, "Correction reason", 500);
+        var normalizedReason = Trim(reason);
+        if (normalizedReason?.Length > 500)
+            throw new WorkshopValidationException("Correction reason must be at most 500 characters.");
         RequireText(idempotencyKey, "Idempotency key", 80);
         if (purchaseDate == default) throw new WorkshopValidationException("Purchase date is required.");
         idempotencyKey = idempotencyKey.Trim();
@@ -396,7 +610,7 @@ public sealed partial class WorkshopService
             ?? throw new WorkshopValidationException("Component purchase information was not found.");
         var payload = JsonSerializer.Serialize(new
         {
-            componentId, purchaseDate, totalPrice, currency, expectedRevision, reason = reason.Trim()
+            componentId, purchaseDate, totalPrice, currency, expectedRevision, reason = normalizedReason
         });
         var existing = await repository.FindOperationAsync(accountId, idempotencyKey, ct);
         if (existing is not null)
@@ -422,14 +636,14 @@ public sealed partial class WorkshopService
             PurchaseDate = purchaseDate, TotalPrice = totalPrice, Currency = currency,
             Revision = purchase.Revision + 1,
             History = purchase.History.Append(new WorkshopComponentPurchaseRevision(
-                purchase.Revision + 1, purchaseDate, totalPrice, currency, reason.Trim(), Now())).ToArray()
+                purchase.Revision + 1, purchaseDate, totalPrice, currency, normalizedReason, Now())).ToArray()
         };
         if (existing is null)
             await CommitAsync(accountId, idempotencyKey, WorkshopOperationType.ComponentPurchaseCorrected,
                 Now(), [], sources, payload, ct,
                 inventoryFacts: [new("component-purchase-correction", ComponentId: componentId,
                     PreviousAmount: purchase.TotalPrice, CurrentAmount: totalPrice, Currency: currency,
-                    Reason: reason.Trim())]);
+                    Reason: normalizedReason)]);
         if (!await repository.ReplaceAsync(DbCollections.WorkshopComponentPurchases,
                 replacement, accountId, expectedRevision, ct))
             throw new WorkshopConflictException("Component purchase changed while saving the correction.");

@@ -372,12 +372,31 @@ export interface WorkshopInventoryProduct {
   brand?: string | null;
   name: string;
   archived: boolean;
+  revision: number;
 }
 
 export interface CreateWorkshopInventoryProductRequest {
   type: WorkshopInventoryProductType;
   brand?: string | null;
   name: string;
+  idempotencyKey: string;
+}
+
+export interface UpdateWorkshopInventoryProductRequest {
+  brand?: string | null;
+  name: string;
+  expectedRevision: number;
+  idempotencyKey: string;
+}
+
+export interface SetWorkshopInventoryProductArchivedRequest {
+  archived: boolean;
+  expectedRevision: number;
+  idempotencyKey: string;
+}
+
+export interface DeleteWorkshopInventoryProductRequest {
+  expectedRevision: number;
   idempotencyKey: string;
 }
 
@@ -392,12 +411,16 @@ export interface WorkshopInventoryLot {
   isEmpty: boolean;
   itemCount?: number | null;
   revision: number;
+  packageCount?: number | null;
+  unitsPerPackage?: number | null;
 }
 
 export interface CreateWorkshopInventoryPurchaseRequest {
   productId: string;
   purchaseDate: string;
-  quantity: number;
+  quantity?: number;
+  packageCount?: number;
+  unitsPerPackage?: number;
   totalPrice: number;
   currency: string;
   idempotencyKey: string;
@@ -408,6 +431,8 @@ export interface WorkshopInventoryPurchase {
   productId: string;
   purchaseDate: string;
   quantity: number;
+  packageCount?: number | null;
+  unitsPerPackage?: number | null;
   totalPrice: number;
   currency: string;
   lots: WorkshopInventoryLot[];
@@ -442,7 +467,7 @@ export interface RecordWorkshopComponentPurchaseRequest {
 export interface CorrectWorkshopComponentPurchaseRequest
   extends RecordWorkshopComponentPurchaseRequest {
   expectedRevision: number;
-  reason: string;
+  reason?: string;
 }
 
 export interface WorkshopComponentPurchaseRevision {
@@ -471,6 +496,8 @@ export interface WorkshopInventory {
   spending: WorkshopCurrencyTotal[];
   partialConsumptionCosts: WorkshopCurrencyTotal[];
   missingComponentPrices: string[];
+  supportsPackageQuantities?: boolean;
+  supportsProductManagement?: boolean;
 }
 
 export interface WorkshopInventorySummary {

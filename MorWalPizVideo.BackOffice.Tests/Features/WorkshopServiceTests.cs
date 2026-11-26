@@ -714,6 +714,84 @@ public sealed class WorkshopServiceTests
         Assert.Equal(52m, Assert.Single(afterCorrection.Spending).Total);
         Assert.Equal(17m, corrected.TotalPrice);
         Assert.Equal(4, created.Session.QuantityProduced);
+
+        var correctedWithoutReason = await service.CorrectComponentPurchaseAsync("account-1", component.Id,
+            corrected.PurchaseDate, corrected.TotalPrice, corrected.Currency, corrected.Revision, null,
+            "component-correction-no-reason");
+        Assert.Null(correctedWithoutReason.History.Last().Reason);
+    }
+
+    [Fact]
+    public async Task Packaged_primer_and_bullet_purchases_track_stock_and_cost_per_unit()
+    {
+        var (service, _, _) = CreateService();
+        var primer = await service.CreateSupplyProductAsync("account-1", "primer", null, "Primer", "pack-primer");
+        var bullet = await service.CreateSupplyProductAsync("account-1", "bullet", "Fiocchi", "Bullet", "pack-bullet");
+        var powder = await service.CreateSupplyProductAsync("account-1", "powder", null, "Powder", "pack-powder");
+        var date = DateTime.UtcNow;
+        var primerPurchase = await service.RecordSupplyPurchaseAsync("account-1", primer.Id, date,
+            null, 4, 1500, 60m, "EUR", "pack-primer-purchase");
+        var bulletPurchase = await service.RecordSupplyPurchaseAsync("account-1", bullet.Id, date,
+            null, 4, 1500, 120m, "EUR", "pack-bullet-purchase");
+        await service.RecordSupplyPurchaseAsync("account-1", powder.Id, date, 1, 5m, "EUR", "pack-powder-purchase");
+        var recipe = await service.CreateRecipeAsync("account-1",
+            new("Pack test", "9mm", null, null, null, null, null, null, null, primer.Id, powder.Id));
+
+        await service.RecordProductionWithSuppliesAsync("account-1",
+            new(recipe.Id, date, 100, null, "pack-production", recipe.Version, bullet.Id,
+                [new(primerPurchase.Lots.Single().Id, 100)],
+                [new(bulletPurchase.Lots.Single().Id, 100)]));
+
+        var inventory = await service.GetInventoryAsync("account-1");
+        var primerLot = inventory.Lots.Single(x => x.ProductId == primer.Id);
+        var bulletLot = inventory.Lots.Single(x => x.ProductId == bullet.Id);
+        Assert.Equal(6000L, primerPurchase.Purchase.Quantity);
+        Assert.Equal(4, primerPurchase.Purchase.PackageCount);
+        Assert.Equal(1500L, primerPurchase.Purchase.UnitsPerPackage);
+        Assert.Equal(6000L, primerLot.PurchasedQuantity);
+        Assert.Equal(5900L, primerLot.AvailableQuantity);
+        Assert.Equal(4, bulletLot.PackageCount);
+        Assert.Equal(1500L, bulletLot.UnitsPerPackage);
+        Assert.Equal(5900L, bulletLot.AvailableQuantity);
+        Assert.Equal(185m, Assert.Single(inventory.Spending).Total);
+        Assert.Equal(8m, Assert.Single(inventory.PartialConsumptionCosts).Total);
+    }
+
+    [Fact]
+    public async Task Supply_products_can_be_edited_and_deleted_until_referenced()
+    {
+        var (service, scenario, _) = CreateService();
+        var product = await service.CreateSupplyProductAsync("account-1", "primer", null, "Primer", "lifecycle-product");
+
+        var updated = await service.UpdateSupplyProductAsync("account-1", product.Id,
+            "Fiocchi", "Small rifle primer", product.Revision, "lifecycle-edit");
+        var retried = await service.UpdateSupplyProductAsync("account-1", product.Id,
+            "Fiocchi", "Small rifle primer", product.Revision, "lifecycle-edit");
+
+        Assert.Equal("Fiocchi", updated.Brand);
+        Assert.Equal("Small rifle primer", updated.Name);
+        Assert.Equal(updated.Revision, retried.Revision);
+        Assert.Equal(product.Type, updated.Type);
+        await service.DeleteSupplyProductAsync("account-1", product.Id, updated.Revision, "lifecycle-delete");
+        await service.DeleteSupplyProductAsync("account-1", product.Id, updated.Revision, "lifecycle-delete");
+        Assert.Empty(scenario.Read<WorkshopSupplyProduct>(DbCollections.WorkshopSupplyProducts));
+    }
+
+    [Fact]
+    public async Task Referenced_supply_products_can_be_archived_but_not_deleted()
+    {
+        var (service, scenario, _) = CreateService();
+        var product = await service.CreateSupplyProductAsync("account-1", "primer", null, "Primer", "archive-product");
+        await service.RecordSupplyPurchaseAsync("account-1", product.Id,
+            DateTime.UtcNow, 10, 10m, "EUR", "archive-product-purchase");
+
+        var archived = await service.SetSupplyProductArchivedAsync(
+            "account-1", product.Id, true, product.Revision, "archive-product-command");
+
+        Assert.True(archived.Archived);
+        await Assert.ThrowsAsync<WorkshopConflictException>(() =>
+            service.DeleteSupplyProductAsync("account-1", product.Id, archived.Revision, "delete-referenced-product"));
+        Assert.Single(scenario.Read<WorkshopSupplyProduct>(DbCollections.WorkshopSupplyProducts));
     }
 
     private static (WorkshopService Service, FakeScenario Scenario, Firearm Firearm) CreateService()

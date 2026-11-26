@@ -3,9 +3,12 @@ import {
   adjustWorkshopInventoryLot,
   correctWorkshopComponentPurchase,
   createWorkshopInventoryProduct,
+  deleteWorkshopInventoryProduct,
   recordWorkshopComponentPurchase,
   recordWorkshopInventoryPurchase,
+  setWorkshopInventoryProductArchived,
   setWorkshopInventoryLotStatus,
+  updateWorkshopInventoryProduct,
 } from "@morwalpizvideo/services";
 import type { ActionFunctionArgs } from "react-router";
 
@@ -76,19 +79,64 @@ export async function action({ request }: ActionFunctionArgs): Promise<Inventory
         name,
         idempotencyKey,
       });
+    } else if (intent === "update-product") {
+      const productId = text(form, "productId");
+      const name = text(form, "name");
+      const brand = text(form, "brand");
+      const expectedRevision = integer(text(form, "expectedRevision"));
+      if (!productId || !name || expectedRevision === undefined) {
+        return failure(intent, idempotencyKey, "Enter a product name before saving.");
+      }
+      await updateWorkshopInventoryProduct(productId, {
+        name,
+        brand: brand || null,
+        expectedRevision,
+        idempotencyKey,
+      });
+    } else if (intent === "archive-product") {
+      const productId = text(form, "productId");
+      const expectedRevision = integer(text(form, "expectedRevision"));
+      const archived = text(form, "archived");
+      if (!productId || expectedRevision === undefined || (archived !== "true" && archived !== "false")) {
+        return failure(intent, idempotencyKey, "The product status form is incomplete.");
+      }
+      await setWorkshopInventoryProductArchived(productId, {
+        archived: archived === "true",
+        expectedRevision,
+        idempotencyKey,
+      });
+    } else if (intent === "delete-product") {
+      const productId = text(form, "productId");
+      const expectedRevision = integer(text(form, "expectedRevision"));
+      if (!productId || expectedRevision === undefined) {
+        return failure(intent, idempotencyKey, "The product deletion form is incomplete.");
+      }
+      await deleteWorkshopInventoryProduct(productId, { expectedRevision, idempotencyKey });
     } else if (intent === "record-purchase") {
       const productId = text(form, "productId");
       const purchaseDate = text(form, "purchaseDate");
       const quantity = integer(text(form, "quantity"), 1);
+      const packageCountValue = text(form, "packageCount");
+      const unitsPerPackageValue = text(form, "unitsPerPackage");
+      const packageCount = integer(packageCountValue, 1);
+      const unitsPerPackage = integer(unitsPerPackageValue, 1);
       const totalPrice = money(text(form, "totalPrice"));
       const currencyCode = text(form, "currency").toUpperCase();
-      if (!productId || !purchaseDate || quantity === undefined || totalPrice === undefined || !currency(currencyCode)) {
+      const packageValuesValid = packageCount !== undefined && packageCount <= 10_000 &&
+        unitsPerPackage !== undefined && unitsPerPackage <= 900_719_925_474;
+      const hasPackageValues = Boolean(packageCountValue || unitsPerPackageValue);
+      if (!productId || !purchaseDate || totalPrice === undefined || !currency(currencyCode) ||
+          (hasPackageValues
+            ? quantity !== undefined || !packageValuesValid
+            : quantity === undefined || quantity > 10_000)) {
         return failure(intent, idempotencyKey, "Enter a valid product, date, quantity, price and three-letter currency.");
       }
       await recordWorkshopInventoryPurchase({
         productId,
         purchaseDate,
-        quantity,
+        ...(hasPackageValues
+          ? { packageCount, unitsPerPackage }
+          : { quantity }),
         totalPrice,
         currency: currencyCode,
         idempotencyKey,
@@ -134,13 +182,11 @@ export async function action({ request }: ActionFunctionArgs): Promise<Inventory
       } else {
         const expectedRevision = integer(text(form, "expectedRevision"), 1);
         const reason = text(form, "reason");
-        if (expectedRevision === undefined || !reason) {
-          return failure(intent, idempotencyKey, "Add a reason for correcting the component purchase.");
-        }
+        if (expectedRevision === undefined) return failure(intent, idempotencyKey, "The purchase revision is missing.");
         await correctWorkshopComponentPurchase(componentId, {
           ...common,
           expectedRevision,
-          reason,
+          ...(reason ? { reason } : {}),
         });
       }
     } else {

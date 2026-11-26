@@ -239,9 +239,32 @@ public sealed class RecordWorkshopSupplyPurchaseRequest
 {
     [Required, StringLength(80)] public string ProductId { get; init; } = string.Empty;
     public DateTime PurchaseDate { get; init; }
-    [Range(1, 10000)] public long Quantity { get; init; }
+    [Range(1, 10000)] public long? Quantity { get; init; }
+    [Range(1, 10000)] public long? PackageCount { get; init; }
+    [Range(1, 900719925474)] public long? UnitsPerPackage { get; init; }
     [Range(typeof(decimal), "0", "999999999999.99")] public decimal TotalPrice { get; init; }
     [Required, RegularExpression("^[A-Z]{3}$")] public string Currency { get; init; } = string.Empty;
+    [Required, StringLength(80)] public string IdempotencyKey { get; init; } = string.Empty;
+}
+
+public sealed class UpdateWorkshopSupplyProductRequest
+{
+    [StringLength(120)] public string? Brand { get; init; }
+    [Required, StringLength(160)] public string Name { get; init; } = string.Empty;
+    [Range(0, long.MaxValue)] public long ExpectedRevision { get; init; }
+    [Required, StringLength(80)] public string IdempotencyKey { get; init; } = string.Empty;
+}
+
+public sealed class SetWorkshopSupplyProductArchivedRequest
+{
+    public bool Archived { get; init; }
+    [Range(0, long.MaxValue)] public long ExpectedRevision { get; init; }
+    [Required, StringLength(80)] public string IdempotencyKey { get; init; } = string.Empty;
+}
+
+public sealed class DeleteWorkshopSupplyProductRequest
+{
+    [Range(0, long.MaxValue)] public long ExpectedRevision { get; init; }
     [Required, StringLength(80)] public string IdempotencyKey { get; init; } = string.Empty;
 }
 
@@ -275,16 +298,17 @@ public sealed class CorrectWorkshopComponentPurchaseRequest
     [Range(typeof(decimal), "0", "999999999999.99")] public decimal TotalPrice { get; init; }
     [Required, RegularExpression("^[A-Z]{3}$")] public string Currency { get; init; } = string.Empty;
     [Range(1, long.MaxValue)] public long ExpectedRevision { get; init; }
-    [Required, StringLength(500)] public string Reason { get; init; } = string.Empty;
+    [StringLength(500)] public string? Reason { get; init; }
     [Required, StringLength(80)] public string IdempotencyKey { get; init; } = string.Empty;
 }
 
 public sealed record WorkshopInventoryProductContract(
-    string Id, string Type, string? Brand, string Name, bool Archived);
+    string Id, string Type, string? Brand, string Name, bool Archived, long Revision = 0);
 
 public sealed record WorkshopInventoryLotContract(
     string Id, string ProductId, DateTime PurchaseDate, long PurchasedQuantity,
-    long AvailableQuantity, decimal TotalPrice, string Currency, bool IsEmpty, long? ItemCount, long Revision);
+    long AvailableQuantity, decimal TotalPrice, string Currency, bool IsEmpty, long? ItemCount, long Revision,
+    long? PackageCount = null, long? UnitsPerPackage = null);
 
 public sealed record WorkshopComponentPurchaseContract(
     string Id, string ComponentId, DateTime PurchaseDate, decimal TotalPrice, string Currency, long Revision,
@@ -298,7 +322,9 @@ public sealed record WorkshopInventoryContract(
     IReadOnlyList<WorkshopComponentPurchaseContract> ComponentPurchases,
     IReadOnlyList<WorkshopCurrencyTotalContract> Spending,
     IReadOnlyList<WorkshopCurrencyTotalContract> PartialConsumptionCosts,
-    IReadOnlyList<string> MissingComponentPrices);
+    IReadOnlyList<string> MissingComponentPrices,
+    bool SupportsPackageQuantities = false,
+    bool SupportsProductManagement = false);
 
 public sealed record WorkshopOperationMutationContract(
     string Id, WorkshopOperationType OperationType, DateTime EffectiveAt, DateTime RecordedAt,

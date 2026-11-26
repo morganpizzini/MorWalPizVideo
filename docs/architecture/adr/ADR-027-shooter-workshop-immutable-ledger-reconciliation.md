@@ -22,6 +22,19 @@ not remove the existing immutable-ledger/replay rules for shooting and other
 Workshop operations, nor does it relax account ownership, validation, stock
 non-negativity checks, or auditability.
 
+Inventory package size is an additive per-purchase snapshot for primers and
+bullets. Lot quantities and production consumption remain individual-unit
+quantities, preserving the existing stock and partial-cost denominator. Missing
+package fields on old requests retain old unit semantics. Product type remains
+the current enum and its existing wire representation; the frontend performs
+explicit normalization rather than changing the serializer or introducing a
+union contract. Product brand/name edits preserve identity. Products with
+history are archived rather than deleted; deletion of an unreferenced product
+uses an account-scoped reference check and optimistic revision, but that
+multi-document check cannot exclude every concurrent reference write without a
+new coordination mechanism. This is a known residual limitation, and archival
+is preferred when concurrent writes are possible.
+
 ## Context
 
 Shooter Workshop records one user operation that can affect several independently

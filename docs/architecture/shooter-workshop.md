@@ -45,6 +45,13 @@ operations are shooting sessions, maintenance events, catalogue create/archive,
 physical component creation, and component replacement; catalogue update/delete
 and unrelated routes remain online-only.
 
+Route-level lazy loading is backed by a build-generated same-origin JS/CSS asset
+manifest. The service worker stages a build-specific cache and activates it only
+after the shell and every manifest asset pass status and content-type validation.
+Failed installs keep the previously active cache, and activation removes only
+older Workshop shell caches. No API response or arbitrary same-origin URL is added
+to the build cache by fetch handling.
+
 Offline access requires a previously successful online sign-in and local device
 preparation. The browser stores only the remembered account identity, not the
 HttpOnly session cookie or a token. On reconnection, the server session is checked
@@ -120,6 +127,28 @@ per-currency views and are not combined into a complete unit-cost claim.
 Commercial ammunition is a manually managed purchased package, distinct from
 produced batches and shooting-session consumption. Inventory data is not included
 in offline snapshots, commands or service-worker caches.
+
+Primer and bullet purchases may include package count and units per package.
+Those values are snapshotted on the purchase and its stock lot; purchased,
+available, consumed, and cost-attribution quantities remain individual units.
+Older requests without package fields retain their existing unit-count meaning,
+and older lots are not converted or inferred from product names. Product brand
+and name may be edited without changing the product ID. Referenced products
+should be archived; permanent deletion is limited to products with no recorded
+references, but its multi-document reference scan is not atomic with concurrent
+Workshop writes. Archive is the safe choice when a product has history or a
+concurrent write is possible.
+
+The inventory API keeps its existing lower-case/camel-case product type strings;
+the shared Workshop service validates and normalizes these to the client's
+existing typed product enum. Package-aware purchase inputs and product
+management are gated by additive inventory capabilities for independently
+deployed clients and servers. New currency inputs default to EUR without
+restricting other valid currencies. Physical-component price correction reasons
+are optional; stock-adjustment reasons remain required. Product kind remains the
+existing enum and request fields remain explicit; introducing a C# union type
+would require new serialization/contract behavior without solving a current
+domain requirement.
 
 ### Recipe journal
 

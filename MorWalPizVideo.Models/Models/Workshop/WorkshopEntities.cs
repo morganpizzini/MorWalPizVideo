@@ -10,7 +10,7 @@ public enum WorkshopTrackingMode { Counter, Interval, Manual }
 public enum WorkshopComponentStatus { Inventory, Installed, Maintenance, Retired }
 public enum WorkshopRecipeStatus { Active, Archived }
 public enum WorkshopMaintenanceEventType { Inspection, Cleaning, ComponentMaintenance, Replacement, CounterAdjustment, General, Malfunction }
-public enum WorkshopOperationType { FirearmCreated, FirearmUpdated, FirearmArchived, ComponentDefinitionCreated, ComponentDefinitionUpdated, ComponentDefinitionArchived, ComponentDefinitionDeleted, ComponentCreated, ComponentUpdated, ComponentArchived, ComponentDeleted, ComponentInstalled, ComponentRemoved, MaintenanceRecorded, CounterAdjusted, RecipeCreated, RecipeUpdated, RecipeArchived, ProductionRecorded, AllocationRecorded, AllocationReleased, AllocationReallocated, ShootingRecorded, ShootingCorrected, StockAdjusted, ComponentSwapped, SupplyProductCreated, SupplyPurchaseRecorded, SupplyStockAdjusted, SupplyLotStatusChanged, ComponentPurchaseRecorded, ComponentPurchaseCorrected, ProductionEdited }
+public enum WorkshopOperationType { FirearmCreated, FirearmUpdated, FirearmArchived, ComponentDefinitionCreated, ComponentDefinitionUpdated, ComponentDefinitionArchived, ComponentDefinitionDeleted, ComponentCreated, ComponentUpdated, ComponentArchived, ComponentDeleted, ComponentInstalled, ComponentRemoved, MaintenanceRecorded, CounterAdjusted, RecipeCreated, RecipeUpdated, RecipeArchived, ProductionRecorded, AllocationRecorded, AllocationReleased, AllocationReallocated, ShootingRecorded, ShootingCorrected, StockAdjusted, ComponentSwapped, SupplyProductCreated, SupplyPurchaseRecorded, SupplyStockAdjusted, SupplyLotStatusChanged, ComponentPurchaseRecorded, ComponentPurchaseCorrected, ProductionEdited, SupplyProductUpdated, SupplyProductArchived, SupplyProductDeleted }
 public enum WorkshopAggregateKind { Firearm, Component, Batch, Allocation, SupplyLot }
 public enum WorkshopProjectionState { Current, Pending, Inconsistent }
 public enum WorkshopSupplyType { Primer, Bullet, Powder, Case, CommercialAmmunition }
@@ -82,6 +82,8 @@ public sealed record WorkshopSupplyPurchase : BaseEntity
     [BsonElement("totalPrice")] public decimal TotalPrice { get; init; }
     [BsonElement("currency")] public string Currency { get; init; } = string.Empty;
     [BsonElement("lotIds")] public IReadOnlyList<string> LotIds { get; init; } = [];
+    [BsonElement("packageCount")] public long? PackageCount { get; init; }
+    [BsonElement("unitsPerPackage")] public long? UnitsPerPackage { get; init; }
 }
 
 public sealed record WorkshopSupplyLot : BaseEntity
@@ -97,6 +99,8 @@ public sealed record WorkshopSupplyLot : BaseEntity
     [BsonElement("status")] public WorkshopSupplyLotStatus Status { get; init; } = WorkshopSupplyLotStatus.Available;
     [BsonElement("itemCount")] public long? ItemCount { get; init; }
     [BsonElement("revision")] public long Revision { get; init; }
+    [BsonElement("packageCount")] public long? PackageCount { get; init; }
+    [BsonElement("unitsPerPackage")] public long? UnitsPerPackage { get; init; }
 }
 
 public sealed record WorkshopComponentPurchase : BaseEntity

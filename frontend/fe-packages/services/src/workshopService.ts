@@ -17,6 +17,9 @@ import type {
   CreateWorkshopProductionRequest,
   UpdateWorkshopProductionRequest,
   CreateWorkshopInventoryProductRequest,
+  UpdateWorkshopInventoryProductRequest,
+  SetWorkshopInventoryProductArchivedRequest,
+  DeleteWorkshopInventoryProductRequest,
   CreateWorkshopInventoryPurchaseRequest,
   AdjustWorkshopInventoryLotRequest,
   SetWorkshopInventoryLotStatusRequest,
@@ -31,6 +34,7 @@ import type {
   WorkshopAmmunitionBatch,
   WorkshopInventory,
   WorkshopInventoryProduct,
+  WorkshopInventoryProductType,
   WorkshopInventoryLot,
   WorkshopInventoryPurchase,
   WorkshopComponentPurchase,
@@ -57,6 +61,24 @@ import { accountApiService, requireSuccessfulResponse } from "./apiTransport";
 
 async function request<T>(operation: Promise<unknown>): Promise<T> {
   return requireSuccessfulResponse(await operation) as T;
+}
+
+const inventoryProductTypes: Record<string, WorkshopInventoryProductType> = {
+  primer: "Primer",
+  bullet: "Bullet",
+  powder: "Powder",
+  case: "Case",
+  commercialammunition: "CommercialAmmunition",
+};
+
+function normalizeInventoryProduct(product: WorkshopInventoryProduct): WorkshopInventoryProduct {
+  const type = inventoryProductTypes[product.type.toLowerCase()];
+  if (!type) throw new Error(`Unsupported Workshop supply product type: ${product.type}`);
+  return {
+    ...product,
+    type,
+    revision: Number.isSafeInteger(product.revision) && product.revision >= 0 ? product.revision : 0,
+  };
 }
 
 /** Every Workshop call intentionally uses accountApiService (cookie + CSRF). */
@@ -247,13 +269,61 @@ export const createWorkshopRecipeJournalEntry = (
 export const getWorkshopBatches = (): Promise<WorkshopAmmunitionBatch[]> =>
   request(accountApiService.get(`${frontendEndpoints.WORKSHOP_AMMUNITION}/batches`));
 
-export const getWorkshopInventory = (): Promise<WorkshopInventory> =>
-  request(accountApiService.get(frontendEndpoints.WORKSHOP_INVENTORY));
+export const getWorkshopInventory = async (): Promise<WorkshopInventory> => {
+  const inventory = await request<WorkshopInventory>(
+    accountApiService.get(frontendEndpoints.WORKSHOP_INVENTORY),
+  );
+  return {
+    ...inventory,
+    products: inventory.products.map(normalizeInventoryProduct),
+    supportsPackageQuantities: inventory.supportsPackageQuantities === true,
+    supportsProductManagement: inventory.supportsProductManagement === true,
+  };
+};
 
-export const createWorkshopInventoryProduct = (
+export const createWorkshopInventoryProduct = async (
   body: CreateWorkshopInventoryProductRequest,
 ): Promise<WorkshopInventoryProduct> =>
-  request(accountApiService.post(frontendEndpoints.WORKSHOP_INVENTORY_PRODUCTS, body));
+  normalizeInventoryProduct(await request(accountApiService.post(
+    frontendEndpoints.WORKSHOP_INVENTORY_PRODUCTS,
+    body,
+  )));
+
+export const updateWorkshopInventoryProduct = async (
+  productId: string,
+  body: UpdateWorkshopInventoryProductRequest,
+): Promise<WorkshopInventoryProduct> =>
+  normalizeInventoryProduct(await request(accountApiService.put(
+    frontendEndpoints.WORKSHOP_INVENTORY_PRODUCT_DETAIL.replace(
+      "{productId}",
+      encodeURIComponent(productId),
+    ),
+    body,
+  )));
+
+export const setWorkshopInventoryProductArchived = async (
+  productId: string,
+  body: SetWorkshopInventoryProductArchivedRequest,
+): Promise<WorkshopInventoryProduct> =>
+  normalizeInventoryProduct(await request(accountApiService.post(
+    frontendEndpoints.WORKSHOP_INVENTORY_PRODUCT_ARCHIVE.replace(
+      "{productId}",
+      encodeURIComponent(productId),
+    ),
+    body,
+  )));
+
+export const deleteWorkshopInventoryProduct = (
+  productId: string,
+  body: DeleteWorkshopInventoryProductRequest,
+): Promise<void> =>
+  request(accountApiService.post(
+    frontendEndpoints.WORKSHOP_INVENTORY_PRODUCT_DELETE.replace(
+      "{productId}",
+      encodeURIComponent(productId),
+    ),
+    body,
+  ));
 
 export const recordWorkshopInventoryPurchase = (
   body: CreateWorkshopInventoryPurchaseRequest,

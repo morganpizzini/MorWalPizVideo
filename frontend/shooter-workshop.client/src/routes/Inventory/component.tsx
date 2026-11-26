@@ -1,4 +1,4 @@
-import { EmptyState, PageTitle } from "@morwalpiz/layout";
+import { Dialog, EmptyState, PageTitle } from "@morwalpiz/layout";
 import type {
   WorkshopComponentDefinition,
   WorkshopInventory,
@@ -13,6 +13,9 @@ import type { InventoryActionResult } from "./action";
 import type { InventoryLoaderData, InventoryRouteData } from "./loader";
 
 type MutationState = "idle" | "busy" | "uncertain";
+type InventoryDialog =
+  | { kind: "component-price"; component: WorkshopPhysicalComponent }
+  | { kind: "edit-product"; product: WorkshopInventory["products"][number] };
 
 function currencyAmount(amount: number, currency: string, culture: string) {
   return `${new Intl.NumberFormat(culture, {
@@ -37,6 +40,8 @@ function InventoryMutationForm({
   label,
   blocked,
   reportState,
+  onSuccess,
+  confirmMessage,
   children,
 }: {
   intent: string;
@@ -44,6 +49,8 @@ function InventoryMutationForm({
   label: string;
   blocked: boolean;
   reportState: (id: string, state: MutationState) => void;
+  onSuccess?: () => void;
+  confirmMessage?: string;
   children: ReactNode;
 }) {
   const { t } = useI18n();
@@ -66,6 +73,7 @@ function InventoryMutationForm({
         setIdempotencyKey(crypto.randomUUID());
         setUncertain(false);
         reportState(mutationId, "idle");
+        onSuccess?.();
       } else if (fetcher.data.uncertain) {
         setUncertain(true);
         reportState(mutationId, "uncertain");
@@ -76,10 +84,16 @@ function InventoryMutationForm({
       return;
     }
     if (!uncertain) reportState(mutationId, "idle");
-  }, [fetcher.data, fetcher.state, mutationId, reportState, uncertain]);
+  }, [fetcher.data, fetcher.state, mutationId, onSuccess, reportState, uncertain]);
 
   return (
-    <fetcher.Form method="post" className="inventory-mutation-form">
+    <fetcher.Form
+      method="post"
+      className="inventory-mutation-form"
+      onSubmit={(event) => {
+        if (confirmMessage && !window.confirm(t(confirmMessage))) event.preventDefault();
+      }}
+    >
       <input type="hidden" name="intent" value={intent} />
       <input type="hidden" name="idempotencyKey" value={idempotencyKey} />
       {children}
@@ -143,6 +157,8 @@ function InventoryContent({
 }) {
   const { culture, t } = useI18n();
   const [mutationStates, setMutationStates] = useState<Record<string, MutationState>>({});
+  const [dialog, setDialog] = useState<InventoryDialog | null>(null);
+  const [selectedProductId, setSelectedProductId] = useState("");
   const reportState = useCallback((id: string, state: MutationState) => {
     setMutationStates((current) => current[id] === state
       ? current
@@ -150,6 +166,8 @@ function InventoryContent({
   }, []);
   const mutationBlocked = Object.values(mutationStates).some((state) => state !== "idle");
   const productById = new Map(inventory.products.map((product) => [product.id, product]));
+  const selectedProduct = productById.get(selectedProductId);
+  const selectedProductUsesPackages = selectedProduct?.type === "Primer" || selectedProduct?.type === "Bullet";
   const componentById = new Map(components.map((component) => [component.id, component]));
   const definitionById = new Map(definitions.map((definition) => [definition.id, definition]));
   const componentByPurchaseId = new Map(inventory.componentPurchases.map((purchase) => [purchase.componentId, purchase]));
@@ -163,15 +181,17 @@ function InventoryContent({
       .filter(Boolean)
       .join(" · ") || component.id;
   };
+  const closeDialog = () => {
+    if (!dialog) return;
+    const mutationId = dialog.kind === "component-price"
+      ? `component:${dialog.component.id}`
+      : `product:${dialog.product.id}`;
+    if (mutationStates[mutationId] && mutationStates[mutationId] !== "idle") return;
+    setDialog(null);
+  };
 
   return (
     <>
-      <section className="panel inventory-policy-note">
-        <h2>{t("Online inventory")}</h2>
-        <p>{t("Inventory and finance changes are never saved offline or queued for sync.")}</p>
-        <p>{t("An interrupted request can leave a partial update. If the result is uncertain, inspect the saved records before continuing.")}</p>
-      </section>
-
       <section className="panel">
         <h2>{t("Recorded finance")}</h2>
         <div className="inventory-finance-grid">
@@ -222,7 +242,12 @@ function InventoryContent({
               >
                 <label>
                   {t("Product")}
-                  <select name="productId" required defaultValue="">
+                  <select
+                    name="productId"
+                    required
+                    value={selectedProductId}
+                    onChange={(event) => setSelectedProductId(event.target.value)}
+                  >
                     <option value="">{t("Select product")}</option>
                     {inventory.products.filter((product) => !product.archived).map((product) => (
                       <option key={product.id} value={product.id}>
@@ -233,9 +258,19 @@ function InventoryContent({
                 </label>
                 <div className="form-grid">
                   <label>{t("Purchase date")}<input type="date" name="purchaseDate" required defaultValue={localDateInputValue()} /></label>
-                  <label>{t("Quantity purchased")}<input type="number" name="quantity" min="1" step="1" required /></label>
+                  {selectedProductUsesPackages && inventory.supportsPackageQuantities ? (
+                    <>
+                      <label>{t("Package count")}<input type="number" name="packageCount" min="1" max="10000" step="1" required /></label>
+                      <label>{t("Units per package")}<input type="number" name="unitsPerPackage" min="1" max="900719925474" step="1" required /></label>
+                    </>
+                  ) : (
+                    <label>
+                      {t(selectedProductUsesPackages ? "Quantity purchased (individual units)" : "Quantity purchased")}
+                      <input type="number" name="quantity" min="1" max="10000" step="1" required />
+                    </label>
+                  )}
                   <label>{t("Total price")}<input type="number" name="totalPrice" min="0" step="0.01" required /></label>
-                  <label>{t("Currency (ISO code)")}<input name="currency" maxLength={3} minLength={3} pattern="[A-Za-z]{3}" required /></label>
+                  <label>{t("Currency (ISO code)")}<input name="currency" maxLength={3} minLength={3} pattern="[A-Za-z]{3}" required defaultValue="EUR" /></label>
                 </div>
               </InventoryMutationForm>
             ) : <p>{t("Create a product before recording a purchase.")}</p>}
@@ -244,16 +279,73 @@ function InventoryContent({
         {inventory.products.length ? (
           <div className="table-wrap mt-3">
             <table>
-              <thead><tr><th>{t("Type")}</th><th>{t("Brand")}</th><th>{t("Product")}</th><th>{t("Status")}</th></tr></thead>
+              <thead><tr><th>{t("Type")}</th><th>{t("Brand")}</th><th>{t("Product")}</th><th>{t("Status")}</th><th>{t("Actions")}</th></tr></thead>
               <tbody>{inventory.products.map((product) => (
                 <tr key={product.id}>
                   <td>{t(product.type)}</td><td>{product.brand || "—"}</td><td>{product.name}</td>
                   <td>{t(product.archived ? "Archived" : "Active")}</td>
+                  <td className="record-actions">
+                    {inventory.supportsProductManagement && (
+                      <>
+                        <button className="button button-quiet" type="button" onClick={() => setDialog({ kind: "edit-product", product })}>
+                          {t("Edit")}
+                        </button>
+                        <InventoryMutationForm
+                          intent="archive-product"
+                          mutationId={`archive-product:${product.id}`}
+                          label={product.archived ? "Restore product" : "Archive product"}
+                          blocked={mutationBlocked}
+                          reportState={reportState}
+                        >
+                          <input type="hidden" name="productId" value={product.id} />
+                          <input type="hidden" name="expectedRevision" value={product.revision} />
+                          <input type="hidden" name="archived" value={String(!product.archived)} />
+                        </InventoryMutationForm>
+                        <InventoryMutationForm
+                          intent="delete-product"
+                          mutationId={`delete-product:${product.id}`}
+                          label="Delete"
+                          confirmMessage="Permanently delete this product? Products with purchase or recipe history cannot be deleted."
+                          blocked={mutationBlocked}
+                          reportState={reportState}
+                        >
+                          <input type="hidden" name="productId" value={product.id} />
+                          <input type="hidden" name="expectedRevision" value={product.revision} />
+                        </InventoryMutationForm>
+                      </>
+                    )}
+                  </td>
                 </tr>
               ))}</tbody>
             </table>
           </div>
         ) : <EmptyState title={t("No supply products")} />}
+        {inventory.products.length > 0 && !inventory.supportsProductManagement && (
+          <p className="status-note">{t("Product editing and deletion require an updated Workshop server.")}</p>
+        )}
+        {dialog?.kind === "edit-product" && (
+          <Dialog
+            open
+            title={t("Edit supply product")}
+            closeLabel={t("Close")}
+            onClose={closeDialog}
+          >
+            <InventoryMutationForm
+              intent="update-product"
+              mutationId={`product:${dialog.product.id}`}
+              label="Save product"
+              blocked={mutationBlocked}
+              reportState={reportState}
+              onSuccess={() => setDialog(null)}
+            >
+              <input type="hidden" name="productId" value={dialog.product.id} />
+              <input type="hidden" name="expectedRevision" value={dialog.product.revision} />
+              <p>{t("Type")}: {t(dialog.product.type)}</p>
+              <label>{t("Brand")}<input name="brand" maxLength={120} defaultValue={dialog.product.brand ?? ""} /></label>
+              <label>{t("Product name or number")}<input name="name" required maxLength={160} defaultValue={dialog.product.name} /></label>
+            </InventoryMutationForm>
+          </Dialog>
+        )}
       </section>
 
       <section className="panel">
@@ -270,15 +362,31 @@ function InventoryContent({
               <tbody>{inventory.lots.map((lot) => {
                 const product = productById.get(lot.productId);
                 const canCount = product?.type === "Primer" || product?.type === "Bullet" || product?.type === "Case";
+                const countedUnits = product?.type === "Primer" || product?.type === "Bullet";
                 const packageStatus = product?.type === "Powder"
                   || product?.type === "Case"
                   || product?.type === "CommercialAmmunition";
                 return (
                   <tr key={lot.id}>
-                    <td>{product ? `${t(product.type)} · ${product.name}` : lot.productId}</td>
+                    <td>{product
+                      ? `${t(product.type)} · ${[product.brand, product.name].filter(Boolean).join(" ")}`
+                      : lot.productId}</td>
                     <td>{formatDate(lot.purchaseDate, culture)}</td>
-                    <td>{formatNumber(lot.purchasedQuantity, culture)}</td>
-                    <td>{formatNumber(product?.type === "Case" && lot.itemCount != null ? lot.itemCount : lot.availableQuantity, culture)}</td>
+                    <td>
+                      {lot.packageCount != null && lot.unitsPerPackage != null
+                        ? t("{packages} packages × {units} units ({total} total units)", {
+                            packages: formatNumber(lot.packageCount, culture),
+                            units: formatNumber(lot.unitsPerPackage, culture),
+                            total: formatNumber(lot.purchasedQuantity, culture),
+                          })
+                        : `${formatNumber(lot.purchasedQuantity, culture)}${countedUnits ? ` ${t("units")}` : ""}`}
+                    </td>
+                    <td>
+                      {formatNumber(product?.type === "Case" && lot.itemCount != null
+                        ? lot.itemCount
+                        : lot.availableQuantity, culture)}
+                      {countedUnits ? ` ${t("units")}` : ""}
+                    </td>
                     <td>{currencyAmount(lot.totalPrice, lot.currency, culture)}</td>
                     <td className="inventory-lot-controls">
                       {canCount && (
@@ -332,7 +440,6 @@ function InventoryContent({
           <div className="inventory-component-list">
             {components.map((component) => {
               const purchase = componentByPurchaseId.get(component.id);
-              const intent = purchase ? "correct-component-purchase" : "component-purchase";
               return (
                 <section key={component.id} className="inventory-component-row">
                   <div>
@@ -359,28 +466,51 @@ function InventoryContent({
                         </ul>
                       </details>
                     )}
+                    <button
+                      className="button button-quiet"
+                      type="button"
+                      onClick={() => setDialog({ kind: "component-price", component })}
+                    >
+                      {t(purchase ? "Correct component price" : "Record component price")}
+                    </button>
                   </div>
-                  <InventoryMutationForm
-                    intent={intent}
-                    mutationId={`component:${component.id}`}
-                    label={purchase ? "Correct component price" : "Record component price"}
-                    blocked={mutationBlocked}
-                    reportState={reportState}
-                  >
-                    <input type="hidden" name="componentId" value={component.id} />
-                    {purchase && <input type="hidden" name="expectedRevision" value={purchase.revision} />}
-                    <div className="form-grid">
-                      <label>{t("Purchase date")}<input name="purchaseDate" type="date" required defaultValue={purchase?.purchaseDate.slice(0, 10) ?? localDateInputValue()} /></label>
-                      <label>{t("Total price")}<input name="totalPrice" type="number" min="0" step="0.01" required defaultValue={purchase?.totalPrice ?? ""} /></label>
-                      <label>{t("Currency (ISO code)")}<input name="currency" maxLength={3} minLength={3} pattern="[A-Za-z]{3}" required defaultValue={purchase?.currency ?? ""} /></label>
-                      {purchase && <label>{t("Reason")}<input name="reason" required maxLength={500} /></label>}
-                    </div>
-                  </InventoryMutationForm>
                 </section>
               );
             })}
           </div>
         ) : <EmptyState title={t("No physical components")} message={<Link to="/firearms?tab=inventory">{t("Create a physical component")}</Link>} />}
+        {dialog?.kind === "component-price" && (() => {
+          const component = dialog.component;
+          const purchase = componentByPurchaseId.get(component.id);
+          const intent = purchase ? "correct-component-purchase" : "component-purchase";
+          return (
+            <Dialog
+              open
+              title={t(purchase ? "Correct component price" : "Record component price")}
+              description={t("Save the price and date for this physical component.")}
+              closeLabel={t("Close")}
+              onClose={closeDialog}
+            >
+              <InventoryMutationForm
+                intent={intent}
+                mutationId={`component:${component.id}`}
+                label={purchase ? "Correct component price" : "Record component price"}
+                blocked={mutationBlocked}
+                reportState={reportState}
+                onSuccess={() => setDialog(null)}
+              >
+                <input type="hidden" name="componentId" value={component.id} />
+                {purchase && <input type="hidden" name="expectedRevision" value={purchase.revision} />}
+                <div className="form-grid">
+                  <label>{t("Purchase date")}<input name="purchaseDate" type="date" required defaultValue={purchase?.purchaseDate.slice(0, 10) ?? localDateInputValue()} /></label>
+                  <label>{t("Total price")}<input name="totalPrice" type="number" min="0" step="0.01" required defaultValue={purchase?.totalPrice ?? ""} /></label>
+                  <label>{t("Currency (ISO code)")}<input name="currency" maxLength={3} minLength={3} pattern="[A-Za-z]{3}" required defaultValue={purchase?.currency ?? "EUR"} /></label>
+                  {purchase && <label>{t("Reason (optional)")}<input name="reason" maxLength={500} /></label>}
+                </div>
+              </InventoryMutationForm>
+            </Dialog>
+          );
+        })()}
         {orphanedPurchases.length > 0 && (
           <section className="inventory-orphaned-prices">
             <h3>{t("Purchase history for unavailable components")}</h3>

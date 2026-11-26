@@ -60,9 +60,9 @@ const batches = [
 
 const inventory: WorkshopInventory = {
   products: [
-    { id: "primer-1", type: "Primer", name: "Primer", archived: false },
-    { id: "powder-1", type: "Powder", name: "Powder", archived: false },
-    { id: "bullet-1", type: "Bullet", name: "Bullet", archived: false },
+    { id: "primer-1", type: "Primer", name: "Primer", archived: false, revision: 0 },
+    { id: "powder-1", type: "Powder", name: "Powder", archived: false, revision: 0 },
+    { id: "bullet-1", type: "Bullet", name: "Bullet", archived: false, revision: 0 },
   ],
   lots: [
     { id: "primer-lot", productId: "primer-1", purchaseDate: "2026-01-01", purchasedQuantity: 500, availableQuantity: 500, totalPrice: 50, currency: "EUR", isEmpty: false, revision: 1 },

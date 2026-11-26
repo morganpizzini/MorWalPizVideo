@@ -1,42 +1,25 @@
 import { Navigate, type RouteObject } from "react-router";
 import AppShell from "../layouts/AppShell";
 import AccountLegalRedirect from "./AccountLegalRedirect";
-import { Component as AccountLogin } from "./AccountLogin";
-import { Component as AccountRegister } from "./AccountRegister";
-import { Component as AccountProfile } from "./AccountProfile";
-import { Component as Ammunition } from "./Ammunition";
-import { Component as Dashboard } from "./Dashboard";
-import { Component as FirearmDetail } from "./FirearmDetail";
-import { Component as Firearms } from "./Firearms";
-import { Component as History } from "./History";
-import Inventory from "./Inventory/component";
-import { Component as RecipeProduction, RecipeProductionError } from "./RecipeProduction";
-import { Component as Reconciliation } from "./Reconciliation";
-import { Component as ShootingSessions } from "./ShootingSessions";
-import { loader as componentsLoader } from "./Components/loader";
-import { action as ammunitionAction } from "./Ammunition/action";
-import { ammunitionShouldRevalidate, loader as ammunitionLoader } from "./Ammunition/loader";
-import { loader as firearmDetailLoader } from "./FirearmDetail/loader";
-import { action as firearmDetailAction } from "./FirearmDetail/action";
-import { loader as dashboardLoader } from "./Dashboard/loader";
-import { loader as shootingSessionsLoader } from "./ShootingSessions/loader";
-import { action as shootingSessionsAction } from "./ShootingSessions/action";
-import { loader as historyLoader } from "./History/loader";
-import { action as inventoryAction } from "./Inventory/action";
-import { loader as inventoryLoader } from "./Inventory/loader";
-import { firearmsShouldRevalidate, loader as firearmsLoader } from "./Firearms/loader";
-import { action as firearmsAction } from "./Firearms/action";
-import { loader as reconciliationLoader } from "./Reconciliation/loader";
-import { action as reconciliationAction } from "./Reconciliation/action";
-import { action as recipeProductionAction } from "./RecipeProduction/action";
-import { loader as recipeProductionLoader } from "./RecipeProduction/loader";
 import { FeedbackProvider } from "../components/feedback/FeedbackProvider";
 import { DeferredRouteError } from "./shared";
 import { action as offlineAction } from "./offlineAction";
 
 export const routes: RouteObject[] = [
-  { path: "/account/login", element: <AccountLogin /> },
-  { path: "/account/register", element: <AccountRegister /> },
+  {
+    path: "/account/login",
+    lazy: async () => {
+      const { Component } = await import("./AccountLogin");
+      return { Component };
+    },
+  },
+  {
+    path: "/account/register",
+    lazy: async () => {
+      const { Component } = await import("./AccountRegister");
+      return { Component };
+    },
+  },
   { path: "/privacy", element: <AccountLegalRedirect path="/privacy" /> },
   { path: "/terms", element: <AccountLegalRedirect path="/terms" /> },
   {
@@ -53,32 +36,135 @@ export const routes: RouteObject[] = [
     ),
     errorElement: <DeferredRouteError />,
     children: [
-      { index: true, element: <Dashboard />, loader: dashboardLoader },
-      { path: "firearms", element: <Firearms />, loader: firearmsLoader, action: firearmsAction, shouldRevalidate: firearmsShouldRevalidate },
-      { path: "firearms/:id", element: <FirearmDetail />, loader: firearmDetailLoader, action: firearmDetailAction },
-      { path: "components", loader: componentsLoader },
+      {
+        index: true,
+        lazy: async () => {
+          const [component, loader] = await Promise.all([
+            import("./Dashboard"),
+            import("./Dashboard/loader"),
+          ]);
+          return { Component: component.Component, loader: loader.loader };
+        },
+      },
+      {
+        path: "firearms",
+        lazy: async () => {
+          const [component, loader, action] = await Promise.all([
+            import("./Firearms"),
+            import("./Firearms/loader"),
+            import("./Firearms/action"),
+          ]);
+          return {
+            Component: component.Component,
+            loader: loader.loader,
+            action: action.action,
+            shouldRevalidate: loader.firearmsShouldRevalidate,
+          };
+        },
+      },
+      {
+        path: "firearms/:id",
+        lazy: async () => {
+          const [component, loader, action] = await Promise.all([
+            import("./FirearmDetail"),
+            import("./FirearmDetail/loader"),
+            import("./FirearmDetail/action"),
+          ]);
+          return { Component: component.Component, loader: loader.loader, action: action.action };
+        },
+      },
+      {
+        path: "components",
+        lazy: async () => {
+          const { loader } = await import("./Components/loader");
+          return { loader };
+        },
+      },
       { path: "maintenance", element: <Navigate to="/sessions/shooting?tab=maintenance" replace /> },
       {
         path: "ammunition",
-        element: <Ammunition />,
-        loader: ammunitionLoader,
-        action: ammunitionAction,
-        shouldRevalidate: ammunitionShouldRevalidate,
+        lazy: async () => {
+          const [component, loader, action] = await Promise.all([
+            import("./Ammunition"),
+            import("./Ammunition/loader"),
+            import("./Ammunition/action"),
+          ]);
+          return {
+            Component: component.Component,
+            loader: loader.loader,
+            action: action.action,
+            shouldRevalidate: loader.ammunitionShouldRevalidate,
+          };
+        },
       },
       { path: "recipes", element: <Navigate to="/ammunition?tab=recipes" replace /> },
       {
         path: "recipes/:recipeId/produce",
-        element: <RecipeProduction />,
-        loader: recipeProductionLoader,
-        action: recipeProductionAction,
-        errorElement: <RecipeProductionError />,
+        lazy: async () => {
+          const [component, loader, action] = await Promise.all([
+            import("./RecipeProduction"),
+            import("./RecipeProduction/loader"),
+            import("./RecipeProduction/action"),
+          ]);
+          return {
+            Component: component.Component,
+            loader: loader.loader,
+            action: action.action,
+            ErrorBoundary: component.RecipeProductionError,
+          };
+        },
       },
       { path: "production", element: <Navigate to="/ammunition" replace /> },
-      { path: "sessions/shooting", element: <ShootingSessions />, loader: shootingSessionsLoader, action: shootingSessionsAction },
-      { path: "history", element: <History />, loader: historyLoader },
-      { path: "inventory", element: <Inventory />, loader: inventoryLoader, action: inventoryAction },
-      { path: "integrity", element: <Reconciliation />, loader: reconciliationLoader, action: reconciliationAction },
-      { path: "account/profile", element: <AccountProfile /> },
+      {
+        path: "sessions/shooting",
+        lazy: async () => {
+          const [component, loader, action] = await Promise.all([
+            import("./ShootingSessions"),
+            import("./ShootingSessions/loader"),
+            import("./ShootingSessions/action"),
+          ]);
+          return { Component: component.Component, loader: loader.loader, action: action.action };
+        },
+      },
+      {
+        path: "history",
+        lazy: async () => {
+          const [component, loader] = await Promise.all([
+            import("./History"),
+            import("./History/loader"),
+          ]);
+          return { Component: component.Component, loader: loader.loader };
+        },
+      },
+      {
+        path: "inventory",
+        lazy: async () => {
+          const [component, loader, action] = await Promise.all([
+            import("./Inventory/component"),
+            import("./Inventory/loader"),
+            import("./Inventory/action"),
+          ]);
+          return { Component: component.default, loader: loader.loader, action: action.action };
+        },
+      },
+      {
+        path: "integrity",
+        lazy: async () => {
+          const [component, loader, action] = await Promise.all([
+            import("./Reconciliation"),
+            import("./Reconciliation/loader"),
+            import("./Reconciliation/action"),
+          ]);
+          return { Component: component.Component, loader: loader.loader, action: action.action };
+        },
+      },
+      {
+        path: "account/profile",
+        lazy: async () => {
+          const { Component } = await import("./AccountProfile");
+          return { Component };
+        },
+      },
       { path: "*", element: <Navigate to="/" replace /> },
     ],
   },

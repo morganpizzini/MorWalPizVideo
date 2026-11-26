@@ -33,8 +33,8 @@ const recipes = [
 
 const inventory: WorkshopInventory = {
   products: [
-    { id: "primer-1", type: "Primer", name: "Small pistol", brand: "Brand", archived: false },
-    { id: "powder-1", type: "Powder", name: "Powder A", archived: false },
+    { id: "primer-1", type: "Primer", name: "Small pistol", brand: "Brand", archived: false, revision: 0 },
+    { id: "powder-1", type: "Powder", name: "Powder A", archived: false, revision: 0 },
   ],
   lots: [],
   componentPurchases: [],
