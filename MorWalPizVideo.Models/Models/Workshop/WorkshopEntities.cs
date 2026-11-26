@@ -186,6 +186,21 @@ public sealed record AmmoRecipeVersion : BaseEntity
     [BsonElement("snapshot")] public RecipeSnapshot Snapshot { get; init; } = new("", "", null, null, null, null, null, null, null, null);
 }
 
+public sealed record WorkshopRecipeJournalEntry : BaseEntity
+{
+    [BsonElement("accountId")] public string AccountId { get; init; } = string.Empty;
+    [BsonElement("recipeId")] public string RecipeId { get; init; } = string.Empty;
+    [BsonElement("entryDate")] public string EntryDate { get; init; } = string.Empty;
+    [BsonElement("timeOfDay")] public string? TimeOfDay { get; init; }
+    [BsonElement("weather")] public string? Weather { get; init; }
+    [BsonElement("temperature")] public string? Temperature { get; init; }
+    [BsonElement("temperatureUnit")] public string? TemperatureUnit { get; init; }
+    [BsonElement("powerFactor")] public string? PowerFactor { get; init; }
+    [BsonElement("notes")] public string? Notes { get; init; }
+    [BsonElement("clientIdempotencyKey")] public string ClientIdempotencyKey { get; init; } = string.Empty;
+    [BsonElement("payloadHash")] public string PayloadHash { get; init; } = string.Empty;
+}
+
 public sealed record ProductionSession : BaseEntity
 {
     [BsonElement("accountId")] public string AccountId { get; init; } = string.Empty;

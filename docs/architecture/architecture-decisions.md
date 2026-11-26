@@ -30,6 +30,7 @@ Architecture Decision Records live in `docs/architecture/adr`. Accepted ADRs gov
 | [ADR-027](adr/ADR-027-shooter-workshop-immutable-ledger-reconciliation.md) | Use an immutable Workshop operation ledger with independently rebuildable projections and reconciliation | Accepted for the Workshop delivery baseline |
 | [ADR-028](adr/ADR-028-startup-reader-indexes.md) | Startup bootstrap for active-reader indexes | Superseded by ADR-029 |
 | [ADR-029](adr/ADR-029-nonblocking-mongo-index-startup.md) | BackOffice attempts all shared-platform indexes at startup without blocking application availability | Accepted |
+| [ADR-030](adr/ADR-030-shooter-workshop-recipe-journal.md) | Keep descriptive recipe journal entries in a separate account-owned collection | Accepted |
 
 ## ADR Process
 

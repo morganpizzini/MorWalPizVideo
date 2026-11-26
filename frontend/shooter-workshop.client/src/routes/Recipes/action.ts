@@ -1,9 +1,13 @@
 import {
+  createWorkshopRecipeJournalEntry,
   createWorkshopRecipe,
   getWorkshopInventory,
   updateWorkshopRecipe,
 } from "@morwalpizvideo/services";
-import type { WorkshopInventory } from "@morwalpizvideo/models";
+import type {
+  CreateWorkshopRecipeJournalEntryRequest,
+  WorkshopInventory,
+} from "@morwalpizvideo/models";
 import type { ActionFunctionArgs } from "react-router";
 
 const text = (form: FormData, key: string) => {
@@ -21,6 +25,61 @@ const numberValue = (form: FormData, key: string) => {
 export async function action({ request }: ActionFunctionArgs) {
   const form = await request.formData();
   const intent = text(form, "intent") ?? "create";
+  if (intent === "journal-create") {
+    const recipeId = text(form, "recipeId");
+    const entryDate = text(form, "entryDate");
+    const idempotencyKey = text(form, "idempotencyKey");
+    const rawTimeOfDay = text(form, "timeOfDay");
+    const timeOfDay = rawTimeOfDay === "Morning" || rawTimeOfDay === "Noon" ||
+      rawTimeOfDay === "Afternoon" || rawTimeOfDay === "Evening"
+      ? rawTimeOfDay
+      : null;
+    const rawTemperatureUnit = text(form, "temperatureUnit");
+    if (
+      (rawTimeOfDay && !timeOfDay) ||
+      (rawTemperatureUnit && rawTemperatureUnit !== "C" && rawTemperatureUnit !== "F")
+    ) {
+      return { ok: false as const, error: "Please review the form.", intent };
+    }
+    const journalEntry: CreateWorkshopRecipeJournalEntryRequest = {
+      entryDate: entryDate ?? "",
+      timeOfDay,
+      weather: text(form, "weather"),
+      temperature: text(form, "temperature"),
+      temperatureUnit: rawTemperatureUnit === "C" || rawTemperatureUnit === "F"
+        ? rawTemperatureUnit
+        : null,
+      powerFactor: text(form, "powerFactor"),
+      notes: text(form, "notes"),
+      idempotencyKey: idempotencyKey ?? "",
+    };
+    if (
+      !recipeId ||
+      !entryDate ||
+      !idempotencyKey ||
+      !(
+        journalEntry.timeOfDay ||
+        journalEntry.weather ||
+        journalEntry.temperature ||
+        journalEntry.powerFactor ||
+        journalEntry.notes
+      )
+    ) {
+      return { ok: false as const, error: "Please review the form.", intent };
+    }
+
+    try {
+      await createWorkshopRecipeJournalEntry(recipeId, journalEntry);
+      return { ok: true as const, intent };
+    } catch (error) {
+      return {
+        ok: false as const,
+        error: error instanceof Error ? error.message : "The request could not be completed.",
+        intent,
+      };
+    }
+  }
+
   const name = text(form, "name");
   const caliber = text(form, "caliber");
   const bulletWeight = numberValue(form, "bulletWeight");

@@ -131,6 +131,7 @@
         public const string WorkshopMaintenanceEvents = "workshopMaintenanceEvents";
         public const string WorkshopRecipes = "workshopRecipes";
         public const string WorkshopRecipeVersions = "workshopRecipeVersions";
+        public const string WorkshopRecipeJournalEntries = "workshopRecipeJournalEntries";
         public const string WorkshopProductionSessions = "workshopProductionSessions";
         public const string WorkshopAmmoBatches = "workshopAmmoBatches";
         public const string WorkshopSupplyProducts = "workshopSupplyProducts";

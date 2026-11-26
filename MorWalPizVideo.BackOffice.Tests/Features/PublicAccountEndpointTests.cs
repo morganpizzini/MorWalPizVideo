@@ -2,7 +2,10 @@ using System.Net;
 using System.Net.Http.Json;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.OutputCaching;
+using Microsoft.Extensions.DependencyInjection;
 using MorWalPiz.Contracts.Contracts;
+using MorWalPiz.Contracts.Contracts.Workshop;
+using MorWalPizVideo.Domain.Workshop;
 using MorWalPizVideo.ServerAPI.Controllers;
 using MorWalPizVideo.BackOffice.Tests.Infrastructure;
 
@@ -258,6 +261,94 @@ public sealed class PublicAccountEndpointTests : IClassFixture<ServerApiWebAppli
         Assert.Equal(1, firstBody!.EffectiveVersion);
         Assert.Equal(HttpStatusCode.OK, second.StatusCode);
         Assert.Equal(1, (await second.Content.ReadFromJsonAsync<WorkshopCapabilityGuideSeenResponse>())!.EffectiveVersion);
+    }
+
+    [Fact]
+    public async Task Recipe_journal_requires_account_and_csrf_and_isolated_by_owner()
+    {
+        using var anonymous = factory.CreateClient();
+        var unauthorized = await anonymous.GetAsync("/api/v1/workshop/recipes/recipe-1/journal");
+        Assert.Equal(HttpStatusCode.Unauthorized, unauthorized.StatusCode);
+
+        using var owner = factory.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = true });
+        var (csrf, accountId) = await RegisterAccountAsync(owner);
+        using (var scope = factory.Services.CreateScope())
+        {
+            var service = scope.ServiceProvider.GetRequiredService<WorkshopService>();
+            var primer = await service.CreateSupplyProductAsync(accountId, "primer", null,
+                "Journal primer", $"journal-primer-{Guid.NewGuid():N}");
+            var powder = await service.CreateSupplyProductAsync(accountId, "powder", null,
+                "Journal powder", $"journal-powder-{Guid.NewGuid():N}");
+            var recipe = await service.CreateRecipeAsync(accountId,
+                new("Practice", "9x19", null, null, null, null, null, null, null, primer.Id, powder.Id));
+            var path = $"/api/v1/workshop/recipes/{recipe.Id}/journal";
+            var request = new CreateWorkshopRecipeJournalEntryRequest
+            {
+                EntryDate = "2026-11-25",
+                Weather = "Clear",
+                Temperature = "-2.50",
+                TemperatureUnit = "C",
+                IdempotencyKey = $"journal-{Guid.NewGuid():N}"
+            };
+
+            using var missingCsrf = new HttpRequestMessage(HttpMethod.Post, path)
+            {
+                Content = JsonContent.Create(request)
+            };
+            Assert.Equal(HttpStatusCode.Forbidden, (await owner.SendAsync(missingCsrf)).StatusCode);
+
+            using var create = new HttpRequestMessage(HttpMethod.Post, path)
+            {
+                Content = JsonContent.Create(request)
+            };
+            create.Headers.Add("X-CSRF-TOKEN", csrf.Token);
+            var response = await owner.SendAsync(create);
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            var createdEntry = await response.Content.ReadFromJsonAsync<WorkshopRecipeJournalEntryContract>()
+                ?? throw new InvalidOperationException("The journal entry response was empty.");
+
+            using var retry = new HttpRequestMessage(HttpMethod.Post, path)
+            {
+                Content = JsonContent.Create(request)
+            };
+            retry.Headers.Add("X-CSRF-TOKEN", csrf.Token);
+            var retried = await owner.SendAsync(retry);
+            Assert.Equal(HttpStatusCode.OK, retried.StatusCode);
+            Assert.Equal(createdEntry.Id,
+                (await retried.Content.ReadFromJsonAsync<WorkshopRecipeJournalEntryContract>())!.Id);
+
+            var entries = await owner.GetFromJsonAsync<List<WorkshopRecipeJournalEntryContract>>(path);
+            Assert.Equal(createdEntry.Id, Assert.Single(entries!).Id);
+            Assert.Equal("-2.50", createdEntry.Temperature);
+
+            using var otherAccount = factory.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = true });
+            await RegisterAccountAsync(otherAccount);
+            var concealed = await otherAccount.GetAsync(path);
+            Assert.Equal(HttpStatusCode.NotFound, concealed.StatusCode);
+        }
+    }
+
+    private static async Task<(PublicAccountCsrfContract Csrf, string AccountId)> RegisterAccountAsync(
+        HttpClient client)
+    {
+        var csrf = await client.GetFromJsonAsync<PublicAccountCsrfContract>("/api/v1/account/csrf");
+        using var registration = new HttpRequestMessage(HttpMethod.Post, "/api/v1/accounts")
+        {
+            Content = JsonContent.Create(new PublicAccountRegistrationRequest
+            {
+                Username = $"user{Guid.NewGuid():N}"[..12],
+                Email = $"{Guid.NewGuid():N}@example.test",
+                Password = "A-strong-password-123",
+                DisplayName = "Workshop User",
+                TermsAccepted = true,
+                PrivacyNoticeAcknowledged = true
+            })
+        };
+        registration.Headers.Add("X-CSRF-TOKEN", csrf!.Token);
+        var response = await client.SendAsync(registration);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var session = await response.Content.ReadFromJsonAsync<PublicAccountSessionContract>();
+        return (csrf, session!.Account!.Id);
     }
 
     [Fact]

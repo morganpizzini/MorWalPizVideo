@@ -104,6 +104,26 @@ public sealed class MongoIndexOperationsTests
     }
 
     [Fact]
+    public void Recipe_journal_has_a_non_unique_account_recipe_date_query_index()
+    {
+        var index = WorkshopMongoIndexes.Manifest.Single(item =>
+            item.Key == "recipejournal.account_recipe_date");
+
+        Assert.False(index.Unique);
+        Assert.Equal("workshopRecipeJournalEntries", index.Collection);
+        Assert.Equal("ix_workshop_recipejournal_account_recipe_date", index.Name);
+        Assert.Equal(new BsonDocument
+        {
+            { "accountId", 1 },
+            { "recipeId", 1 },
+            { "entryDate", -1 },
+            { "_id", -1 }
+        }, index.Keys);
+        Assert.Contains(MongoIndexOperationsService.Manifest, item =>
+            item.Key == index.Key && item.Name == index.Name && item.Keys.Equals(index.Keys));
+    }
+
+    [Fact]
     public void Video_importer_settings_manifest_requires_a_unique_channel_index()
     {
         var index = MongoIndexOperationsService.Manifest

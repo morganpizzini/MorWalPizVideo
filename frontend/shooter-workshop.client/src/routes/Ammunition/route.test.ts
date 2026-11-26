@@ -2,13 +2,17 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type {
   WorkshopAmmunitionBatch,
   WorkshopInventory,
+  WorkshopProductionMutationContract,
   WorkshopProductionRecord,
   WorkshopRecipe,
+  WorkshopRecipeJournalEntry,
 } from "@morwalpizvideo/models";
 import {
+  createWorkshopRecipeJournalEntry,
   getWorkshopBatches,
   getWorkshopInventory,
   getWorkshopProductionRecords,
+  getWorkshopRecipeJournalEntries,
   getWorkshopRecipes,
   recordWorkshopProduction,
 } from "@morwalpizvideo/services";
@@ -19,9 +23,11 @@ vi.mock("@morwalpizvideo/services", () => ({
   ApiResponseError: class ApiResponseError extends Error {
     status?: number;
   },
+  createWorkshopRecipeJournalEntry: vi.fn(),
   getWorkshopBatches: vi.fn(),
   getWorkshopInventory: vi.fn(),
   getWorkshopProductionRecords: vi.fn(),
+  getWorkshopRecipeJournalEntries: vi.fn(),
   getWorkshopRecipes: vi.fn(),
   recordWorkshopProduction: vi.fn(),
 }));
@@ -136,22 +142,114 @@ describe("Ammunition route data functions", () => {
     vi.mocked(getWorkshopRecipes).mockResolvedValue(recipes);
     vi.mocked(getWorkshopBatches).mockResolvedValue(batches);
 
-    const result = loader();
+    const result = loader({ request: new Request("https://workshop.local/ammunition") } as never);
     await expect(result.recipes).resolves.toEqual(recipes);
     await expect(result.batches).resolves.toEqual(batches);
+    await expect(result.recipeJournal).resolves.toBeNull();
     await expect(result.inventory).resolves.toEqual({ inventory, online: true });
     await expect(result.productionRecords).resolves.toEqual(productionRecords);
     await expect(result.productionPanel).resolves.toEqual([recipes, batches, productionRecords]);
   });
 
+  it("loads journal entries only for a recipe in the account recipe list", async () => {
+    const entries = [{
+      id: "journal-1",
+      recipeId: "recipe-1",
+      entryDate: "2026-11-25",
+      weather: "Clear",
+      temperature: "-2.50",
+      temperatureUnit: "C",
+      createdAt: "2026-11-25T10:00:00Z",
+    }] satisfies WorkshopRecipeJournalEntry[];
+    vi.mocked(getWorkshopRecipes).mockResolvedValue(recipes);
+    vi.mocked(getWorkshopRecipeJournalEntries).mockResolvedValue(entries);
+
+    const selected = loader({
+      request: new Request("https://workshop.local/ammunition?tab=recipes&filter=active&recipeId=recipe-1"),
+    } as never);
+    await expect(selected.recipeJournal).resolves.toEqual({ recipeId: "recipe-1", entries });
+    expect(getWorkshopRecipeJournalEntries).toHaveBeenCalledWith("recipe-1");
+
+    vi.mocked(getWorkshopRecipeJournalEntries).mockClear();
+    const invalid = loader({
+      request: new Request("https://workshop.local/ammunition?recipeId=another-account-recipe"),
+    } as never);
+    await expect(invalid.recipeJournal).resolves.toBeNull();
+    expect(getWorkshopRecipeJournalEntries).not.toHaveBeenCalled();
+  });
+
+  it("dispatches recipe journal submissions through the recipes action", async () => {
+    vi.mocked(createWorkshopRecipeJournalEntry).mockResolvedValue({
+      id: "journal-1",
+      recipeId: "recipe-1",
+      entryDate: "2026-11-25",
+      weather: "Clear",
+      createdAt: "2026-11-25T10:00:00Z",
+    });
+    const request = new Request("https://workshop.local/ammunition?tab=recipes&recipeId=recipe-1", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        intent: "journal-create",
+        recipeId: "recipe-1",
+        idempotencyKey: "stable-key",
+        entryDate: "2026-11-25",
+        weather: "Clear",
+      }).toString(),
+    });
+
+    await expect(action({ request } as never)).resolves.toEqual({
+      ok: true,
+      intent: "journal-create",
+    });
+    expect(createWorkshopRecipeJournalEntry).toHaveBeenCalledWith("recipe-1", {
+      entryDate: "2026-11-25",
+      timeOfDay: null,
+      weather: "Clear",
+      temperature: null,
+      temperatureUnit: null,
+      powerFactor: null,
+      notes: null,
+      idempotencyKey: "stable-key",
+    });
+  });
+
   it("submits production through the shared service", async () => {
-    vi.mocked(recordWorkshopProduction).mockResolvedValue({
+    const recipeSnapshot = { name: "Practice", caliber: "9x19", version: 1 };
+    const result = {
       id: "operation-1",
       operationType: "ProductionRecorded",
       effectiveAt: "2026-11-15T00:00:00Z",
       recordedAt: "2026-11-15T00:00:00Z",
       contributionDigest: "digest",
-    });
+      session: {
+        id: "production-1",
+        accountId: "account-1",
+        recipeId: "recipe-1",
+        recipeSnapshot,
+        productionDate: "2026-11-15T00:00:00Z",
+        quantityProduced: 250,
+        batchId: "batch-1",
+        bulletProductId: "bullet-1",
+        primerLotAllocations: [{ lotId: "primer-lot", quantity: 250 }],
+        bulletLotAllocations: [{ lotId: "bullet-lot", quantity: 250 }],
+        revision: 0,
+        notes: "range session",
+      },
+      batch: {
+        id: "batch-1",
+        accountId: "account-1",
+        recipeId: "recipe-1",
+        recipeSnapshot,
+        productionSessionId: "production-1",
+        productionDate: "2026-11-15T00:00:00Z",
+        producedQuantity: 250,
+        onHandQuantity: 250,
+        revision: 0,
+        notes: "range session",
+      },
+    } satisfies WorkshopProductionMutationContract;
+    vi.mocked(recordWorkshopProduction).mockResolvedValue(result);
 
     const request = new Request("https://workshop.local/ammunition", {
       method: "POST",

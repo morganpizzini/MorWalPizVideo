@@ -7,7 +7,7 @@ export async function action(args: ActionFunctionArgs) {
   const actionRequest = request.clone();
   const actionForm = await actionRequest.formData();
   const intent = actionForm.get("intent");
-  if (intent === "create" || intent === "update") {
+  if (intent === "create" || intent === "update" || intent === "journal-create") {
     return recipesAction(args);
   }
   return submitProduction(actionForm);

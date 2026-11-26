@@ -1,11 +1,20 @@
 import { useEffect, useState } from "react";
 import { Dialog, EmptyState, PageTitle } from "@morwalpiz/layout";
-import type { WorkshopInventory, WorkshopRecipe } from "@morwalpizvideo/models";
-import { Link, useFetcher } from "react-router";
+import type {
+  WorkshopInventory,
+  WorkshopRecipe,
+  WorkshopRecipeJournalEntry,
+} from "@morwalpizvideo/models";
+import { Link, useFetcher, useSearchParams } from "react-router";
 import { useI18n } from "../../i18n";
+import { DeferredRoute } from "../shared";
 import type { action } from "./action";
 
 type RecipeFetcher = ReturnType<typeof useFetcher<typeof action>>;
+type RecipeJournalLoaderData = {
+  recipeId: string;
+  entries: WorkshopRecipeJournalEntry[];
+} | null;
 
 const fields = [
   ["name", "Name", "text", true],
@@ -20,16 +29,38 @@ export default function Recipes({
   recipes,
   inventory,
   inventoryLoading = false,
+  journal,
   embedded = false,
 }: {
   recipes: WorkshopRecipe[];
   inventory: WorkshopInventory | null;
   inventoryLoading?: boolean;
+  journal?: Promise<RecipeJournalLoaderData>;
   embedded?: boolean;
 }) {
   const { t } = useI18n();
   const [showForm, setShowForm] = useState(false);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const selectedId = searchParams.get("recipeId");
+
+  useEffect(() => {
+    if (selectedId && !recipes.some((recipe) => recipe.id === selectedId)) {
+      setSearchParams((current) => {
+        const next = new URLSearchParams(current);
+        next.delete("recipeId");
+        return next;
+      }, { replace: true, preventScrollReset: true });
+    }
+  }, [recipes, selectedId, setSearchParams]);
+
+  const selectRecipe = (recipeId: string | null) => {
+    setSearchParams((current) => {
+      const next = new URLSearchParams(current);
+      if (recipeId) next.set("recipeId", recipeId);
+      else next.delete("recipeId");
+      return next;
+    }, { preventScrollReset: true });
+  };
 
   return (
     <div>
@@ -63,11 +94,11 @@ export default function Recipes({
               role="button"
               tabIndex={0}
               aria-label={`${recipe.name} ${t("recipe details")}`}
-              onClick={() => setSelectedId(recipe.id)}
+              onClick={() => selectRecipe(recipe.id)}
               onKeyDown={(event) => {
                 if (event.key === "Enter" || event.key === " ") {
                   event.preventDefault();
-                  setSelectedId(recipe.id);
+                  selectRecipe(recipe.id);
                 }
               }}
             >
@@ -95,7 +126,8 @@ export default function Recipes({
         <RecipeDetails
           recipe={recipes.find((item) => item.id === selectedId) ?? null}
           inventory={inventory}
-          onClose={() => setSelectedId(null)}
+          journal={journal}
+          onClose={() => selectRecipe(null)}
         />
       )}
     </div>
@@ -104,9 +136,10 @@ export default function Recipes({
 
 function ActionFeedback({ fetcher }: { fetcher: RecipeFetcher }) {
   if (fetcher.state !== "idle" || !fetcher.data || fetcher.data.ok) return null;
+  const { t } = useI18n();
   return (
     <p className="form-error" role="alert">
-      {fetcher.data.error}
+      {t(fetcher.data.error)}
     </p>
   );
 }
@@ -211,14 +244,17 @@ function RecipeForm({
 function RecipeDetails({
   recipe,
   inventory,
+  journal,
   onClose,
 }: {
   recipe: WorkshopRecipe | null;
   inventory: WorkshopInventory | null;
+  journal?: Promise<RecipeJournalLoaderData>;
   onClose: () => void;
 }) {
   const { t } = useI18n();
   const [editing, setEditing] = useState(false);
+  const [addingJournalEntry, setAddingJournalEntry] = useState(false);
   if (!recipe) return null;
   const display = (value: string | number | null | undefined) =>
     value === null || value === undefined || value === "" ? t("Not set") : String(value);
@@ -289,8 +325,185 @@ function RecipeDetails({
                 </Link>
               )}
             </div>
+            <section className="recipe-journal" aria-labelledby="recipe-journal-heading">
+              <div className="recipe-journal-heading">
+                <div>
+                  <h3 id="recipe-journal-heading">{t("Recipe journal")}</h3>
+                  <p>{t("Keep a manual record of conditions and observations for this recipe.")}</p>
+                </div>
+                <button
+                  type="button"
+                  className="button button-primary"
+                  disabled={recipe.status !== "Active"}
+                  onClick={() => setAddingJournalEntry(true)}
+                >
+                  {t("Add journal entry")}
+                </button>
+              </div>
+              <p className="status-note">{t("Journal entries are available online only.")}</p>
+              {recipe.status !== "Active" && (
+                <p className="status-note">{t("Archived recipes are read-only.")}</p>
+              )}
+              {addingJournalEntry && recipe.status === "Active" && (
+                <RecipeJournalForm
+                  recipeId={recipe.id}
+                  onSaved={() => setAddingJournalEntry(false)}
+                  onCancel={() => setAddingJournalEntry(false)}
+                />
+              )}
+              {journal && (
+                <DeferredRoute
+                  data={journal}
+                  fallback={<p className="status-note" role="status">{t("Loading recipe journal...")}</p>}
+                >
+                  {(data) => data?.recipeId === recipe.id ? (
+                    <RecipeJournalList entries={data.entries} />
+                  ) : (
+                    <p className="status-note">{t("Recipe journal is unavailable for this recipe.")}</p>
+                  )}
+                </DeferredRoute>
+              )}
+            </section>
           </>
       )}
     </Dialog>
+  );
+}
+
+function RecipeJournalList({ entries }: { entries: WorkshopRecipeJournalEntry[] }) {
+  const { culture, t } = useI18n();
+  const display = (value: string | null | undefined) => value || t("Not set");
+  if (!entries.length) return <p className="status-note">{t("No journal entries yet")}</p>;
+
+  return (
+    <div
+      className="recipe-journal-table-wrap"
+      role="region"
+      aria-label={t("Recipe journal entries")}
+      tabIndex={0}
+    >
+      <table className="recipe-journal-table">
+        <caption className="visually-hidden">{t("Recipe journal entries")}</caption>
+        <thead>
+          <tr>
+            <th scope="col">{t("Date")}</th>
+            <th scope="col">{t("Time of day")}</th>
+            <th scope="col">{t("Weather")}</th>
+            <th scope="col">{t("Temperature")}</th>
+            <th scope="col">{t("Power factor")}</th>
+            <th scope="col">{t("Notes")}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {entries.map((entry) => (
+            <tr key={entry.id}>
+              <td>
+                <time dateTime={entry.entryDate}>
+                  {new Intl.DateTimeFormat(culture, {
+                    dateStyle: "medium",
+                    timeZone: "UTC",
+                  }).format(new Date(`${entry.entryDate}T00:00:00Z`))}
+                </time>
+              </td>
+              <td>{entry.timeOfDay ? t(entry.timeOfDay) : t("Not set")}</td>
+              <td>{display(entry.weather)}</td>
+              <td>{entry.temperature
+                ? `${entry.temperature} ${entry.temperatureUnit ?? ""}`.trim()
+                : t("Not set")}</td>
+              <td>{display(entry.powerFactor)}</td>
+              <td>{display(entry.notes)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function RecipeJournalForm({
+  recipeId,
+  onSaved,
+  onCancel,
+}: {
+  recipeId: string;
+  onSaved: () => void;
+  onCancel: () => void;
+}) {
+  const { t } = useI18n();
+  const fetcher = useFetcher<typeof action>();
+  const [idempotencyKey] = useState(() => crypto.randomUUID());
+
+  useEffect(() => {
+    if (fetcher.state === "idle" && fetcher.data?.ok) onSaved();
+  }, [fetcher.data, fetcher.state, onSaved]);
+
+  return (
+    <fetcher.Form method="post" className="panel recipe-form recipe-journal-form">
+      <input type="hidden" name="intent" value="journal-create" />
+      <input type="hidden" name="recipeId" value={recipeId} />
+      <input type="hidden" name="idempotencyKey" value={idempotencyKey} />
+      <h4>{t("Add journal entry")}</h4>
+      <div className="form-grid">
+        <label>
+          {t("Entry date")}
+          <input name="entryDate" type="date" required />
+        </label>
+        <label>
+          {t("Time of day")}
+          <select name="timeOfDay" defaultValue="">
+            <option value="">{t("Select time of day")}</option>
+            <option value="Morning">{t("Morning")}</option>
+            <option value="Noon">{t("Noon")}</option>
+            <option value="Afternoon">{t("Afternoon")}</option>
+            <option value="Evening">{t("Evening")}</option>
+          </select>
+        </label>
+        <label>
+          {t("Weather")}
+          <input name="weather" type="text" maxLength={100} />
+        </label>
+        <label>
+          {t("Temperature")}
+          <input
+            name="temperature"
+            type="text"
+            inputMode="decimal"
+            maxLength={32}
+            pattern="[+-]?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)"
+          />
+        </label>
+        <label>
+          {t("Temperature unit")}
+          <select name="temperatureUnit" defaultValue="">
+            <option value="">{t("Select unit")}</option>
+            <option value="C">{t("Celsius (C)")}</option>
+            <option value="F">{t("Fahrenheit (F)")}</option>
+          </select>
+        </label>
+        <label>
+          {t("Power factor")}
+          <input
+            name="powerFactor"
+            type="text"
+            inputMode="decimal"
+            maxLength={32}
+            pattern="[+-]?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)"
+          />
+        </label>
+      </div>
+      <label>
+        {t("Notes")}
+        <textarea name="notes" maxLength={2000} />
+      </label>
+      <ActionFeedback fetcher={fetcher} />
+      <div className="feedback-actions">
+        <button className="button button-quiet" type="button" onClick={onCancel}>
+          {t("Cancel")}
+        </button>
+        <button className="button button-primary" disabled={fetcher.state !== "idle"}>
+          {fetcher.state !== "idle" ? t("Saving…") : t("Save entry")}
+        </button>
+      </div>
+    </fetcher.Form>
   );
 }

@@ -14,10 +14,14 @@ public interface IWorkshopRepository
     Task<IReadOnlyList<T>> ListByDateAsync<T>(string collection, string accountId, string dateField,
         DateTime fromInclusive, DateTime toExclusive, CancellationToken cancellationToken = default)
         where T : BaseEntity;
+    Task<IReadOnlyList<WorkshopRecipeJournalEntry>> ListRecipeJournalEntriesAsync(
+        string accountId, string recipeId, CancellationToken cancellationToken = default);
     Task<T?> GetAsync<T>(string collection, string accountId, string id, CancellationToken cancellationToken = default)
         where T : BaseEntity;
     Task AddAsync<T>(string collection, T item, CancellationToken cancellationToken = default)
         where T : BaseEntity;
+    Task AddRecipeJournalEntryAsync(
+        WorkshopRecipeJournalEntry entry, CancellationToken cancellationToken = default);
     Task<bool> ReplaceAsync<T>(string collection, T item, string accountId, long? expectedRevision = null,
         CancellationToken cancellationToken = default) where T : BaseEntity;
     Task<bool> DeleteAsync<T>(string collection, string accountId, string id, long? expectedRevision = null,
@@ -49,6 +53,14 @@ public sealed class WorkshopRepository(IMongoDatabase database) : IWorkshopRepos
                 Builders<T>.Filter.Lt(dateField, toExclusive)))
             .ToListAsync(cancellationToken);
 
+    public async Task<IReadOnlyList<WorkshopRecipeJournalEntry>> ListRecipeJournalEntriesAsync(
+        string accountId, string recipeId, CancellationToken cancellationToken = default) =>
+        await database.GetCollection<WorkshopRecipeJournalEntry>(DbCollections.WorkshopRecipeJournalEntries)
+            .Find(x => x.AccountId == accountId && x.RecipeId == recipeId)
+            .SortByDescending(x => x.EntryDate)
+            .ThenByDescending(x => x.Id)
+            .ToListAsync(cancellationToken);
+
     public Task<T?> GetAsync<T>(string collection, string accountId, string id, CancellationToken cancellationToken = default)
         where T : BaseEntity =>
         database.GetCollection<T>(collection)
@@ -58,6 +70,20 @@ public sealed class WorkshopRepository(IMongoDatabase database) : IWorkshopRepos
     public Task AddAsync<T>(string collection, T item, CancellationToken cancellationToken = default)
         where T : BaseEntity =>
         database.GetCollection<T>(collection).InsertOneAsync(item, cancellationToken: cancellationToken);
+
+    public async Task AddRecipeJournalEntryAsync(
+        WorkshopRecipeJournalEntry entry, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await database.GetCollection<WorkshopRecipeJournalEntry>(DbCollections.WorkshopRecipeJournalEntries)
+                .InsertOneAsync(entry, cancellationToken: cancellationToken);
+        }
+        catch (MongoWriteException exception) when (exception.WriteError?.Category == ServerErrorCategory.DuplicateKey)
+        {
+            throw new WorkshopDuplicateRecipeJournalException();
+        }
+    }
 
     public async Task<bool> ReplaceAsync<T>(string collection, T item, string accountId, long? expectedRevision = null,
         CancellationToken cancellationToken = default) where T : BaseEntity
@@ -135,6 +161,20 @@ public sealed class WorkshopMockRepository(IMockScenario scenario) : IWorkshopRe
         }
     }
 
+    public Task<IReadOnlyList<WorkshopRecipeJournalEntry>> ListRecipeJournalEntriesAsync(
+        string accountId, string recipeId, CancellationToken cancellationToken = default)
+    {
+        lock (gate)
+        {
+            var entries = scenario.Read<WorkshopRecipeJournalEntry>(DbCollections.WorkshopRecipeJournalEntries)
+                .Where(x => x.AccountId == accountId && x.RecipeId == recipeId)
+                .OrderByDescending(x => x.EntryDate, StringComparer.Ordinal)
+                .ThenByDescending(x => x.Id, StringComparer.Ordinal)
+                .ToArray();
+            return Task.FromResult<IReadOnlyList<WorkshopRecipeJournalEntry>>(entries);
+        }
+    }
+
     public Task<T?> GetAsync<T>(string collection, string accountId, string id, CancellationToken cancellationToken = default)
         where T : BaseEntity
     {
@@ -144,6 +184,19 @@ public sealed class WorkshopMockRepository(IMockScenario scenario) : IWorkshopRe
     public Task AddAsync<T>(string collection, T item, CancellationToken cancellationToken = default) where T : BaseEntity
     {
         lock (gate) scenario.Add(collection, item);
+        return Task.CompletedTask;
+    }
+
+    public Task AddRecipeJournalEntryAsync(
+        WorkshopRecipeJournalEntry entry, CancellationToken cancellationToken = default)
+    {
+        lock (gate)
+        {
+            if (scenario.Read<WorkshopRecipeJournalEntry>(DbCollections.WorkshopRecipeJournalEntries)
+                .Any(x => x.Id == entry.Id))
+                throw new WorkshopDuplicateRecipeJournalException();
+            scenario.Add(DbCollections.WorkshopRecipeJournalEntries, entry);
+        }
         return Task.CompletedTask;
     }
 
@@ -223,6 +276,7 @@ public sealed class WorkshopMockRepository(IMockScenario scenario) : IWorkshopRe
             MaintenanceEvent x => x.AccountId,
             AmmoRecipe x => x.AccountId,
             AmmoRecipeVersion x => x.AccountId,
+            WorkshopRecipeJournalEntry x => x.AccountId,
             ProductionSession x => x.AccountId,
             AmmoBatch x => x.AccountId,
             WorkshopSupplyProduct x => x.AccountId,
@@ -267,6 +321,7 @@ public sealed class WorkshopMockRepository(IMockScenario scenario) : IWorkshopRe
 }
 
 public sealed class WorkshopDuplicateOperationException : Exception;
+public sealed class WorkshopDuplicateRecipeJournalException : Exception;
 
 public sealed record WorkshopMongoIndexDefinition(string Key, string Collection, string Name, BsonDocument Keys, bool Unique = false);
 
@@ -282,6 +337,9 @@ public static class WorkshopMongoIndexes
             new BsonDocument { { "accountId", 1 }, { "componentId", 1 }, { "removedAt", 1 } }),
         new("batches.account_recipe_date", DbCollections.WorkshopAmmoBatches, "ix_workshop_batches_account_recipe_date",
             new BsonDocument { { "accountId", 1 }, { "recipeId", 1 }, { "productionDate", -1 } }),
+        new("recipejournal.account_recipe_date", DbCollections.WorkshopRecipeJournalEntries,
+            "ix_workshop_recipejournal_account_recipe_date",
+            new BsonDocument { { "accountId", 1 }, { "recipeId", 1 }, { "entryDate", -1 }, { "_id", -1 } }),
         new("supplyproducts.account_type", DbCollections.WorkshopSupplyProducts, "ix_workshop_supplyproducts_account_type",
             new BsonDocument { { "accountId", 1 }, { "type", 1 }, { "archived", 1 } }),
         new("supplypurchases.account_product_date", DbCollections.WorkshopSupplyPurchases, "ix_workshop_supplypurchases_account_product_date",

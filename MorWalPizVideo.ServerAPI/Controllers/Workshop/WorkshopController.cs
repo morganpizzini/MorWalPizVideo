@@ -400,6 +400,31 @@ public sealed class WorkshopController(WorkshopService service, IPublicAccountSe
         catch (WorkshopConflictException ex) { return Conflict(new ProblemDetails { Title = ex.Message }); }
     }
 
+    [HttpGet("recipes/{recipeId}/journal")]
+    public async Task<IActionResult> RecipeJournal(string recipeId, CancellationToken ct)
+    {
+        var entries = await service.GetRecipeJournalEntriesAsync(AccountId(), recipeId, ct);
+        return entries is null
+            ? NotFound()
+            : Ok(entries.Select(ToContract).ToArray());
+    }
+
+    [HttpPost("recipes/{recipeId}/journal")]
+    public async Task<IActionResult> CreateRecipeJournalEntry(
+        string recipeId, CreateWorkshopRecipeJournalEntryRequest request, CancellationToken ct)
+    {
+        if (!HasCsrf()) return CsrfFailure();
+        try
+        {
+            var entry = await service.CreateRecipeJournalEntryAsync(AccountId(), recipeId,
+                new(request.EntryDate, request.TimeOfDay, request.Weather, request.Temperature,
+                    request.TemperatureUnit, request.PowerFactor, request.Notes, request.IdempotencyKey), ct);
+            return Ok(ToContract(entry));
+        }
+        catch (WorkshopValidationException ex) { return ValidationProblem(ex.Message); }
+        catch (WorkshopConflictException ex) { return Conflict(new ProblemDetails { Title = ex.Message }); }
+    }
+
     [HttpGet("ammunition/batches")]
     public async Task<IActionResult> Batches(CancellationToken ct) =>
         Ok(await service.GetBatchesAsync(AccountId(), ct));
@@ -566,6 +591,9 @@ public sealed class WorkshopController(WorkshopService service, IPublicAccountSe
         new(request.Name, request.Caliber, request.Oal, request.BulletWeight, request.BulletForm,
             request.Primer, request.Powder, request.PowderWeight, request.Notes,
             request.PrimerProductId, request.PowderProductId);
+    private static WorkshopRecipeJournalEntryContract ToContract(WorkshopRecipeJournalEntry entry) =>
+        new(entry.Id, entry.RecipeId, entry.EntryDate, entry.TimeOfDay, entry.Weather,
+            entry.Temperature, entry.TemperatureUnit, entry.PowerFactor, entry.Notes, entry.CreationDateTime);
     private static WorkshopOperationContract ToContract(WorkshopOperationResult result) =>
         new(result.Operation.Id, result.Operation.OperationType, result.Operation.EffectiveAt,
             result.Operation.RecordedAt, result.Operation.ContributionDigest);

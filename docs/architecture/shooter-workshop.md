@@ -121,6 +121,25 @@ Commercial ammunition is a manually managed purchased package, distinct from
 produced batches and shooting-session consumption. Inventory data is not included
 in offline snapshots, commands or service-worker caches.
 
+### Recipe journal
+
+The recipe journal is an online-only, append-only record of user-entered
+calendar date, optional time of day, weather, temperature and unit, power factor,
+and notes. It performs no calculations, assessments, recommendations, or
+automatic weather lookup. Entries belong to the owning account and recipe, not
+to a recipe version; recipe edits and archive do not rewrite or remove history.
+Owners may read entries for archived recipes, but cannot add new entries to
+them.
+
+Journal entries are stored in a separate account-owned collection. They do not
+change stock, counters, projections, or the immutable operation ledger. The
+server derives account identity from the authenticated public-account session,
+checks recipe ownership for every read and write, and requires CSRF for entry
+creation. A stable account/key-derived document ID makes retries idempotent:
+the same normalized request returns the saved entry, while reuse for another
+payload returns a conflict. The account/recipe/date query index supports newest
+date first reads with a stable ID tie-breaker.
+
 The user expects online operations by one person and accepts the risk that
 interruption between separate MongoDB writes can leave a partial production,
 inventory or batch update. This feature does not add a MongoDB transaction or an
@@ -159,9 +178,10 @@ complete operational rollback evidence remain open. BackOffice remains
 operational index governance only;
 it has no Workshop product behavior or ownership. Installation-specific read
 projections and deployed same-origin browser proof remain open. Recipe editing is
-implemented through the account-owned, versioned Workshop PUT route; recipe search,
-filters, archive, duplicate, production history, and version-history UI remain
-follow-up work explicitly tracked in the delivery handoff.
+implemented through the account-owned, versioned Workshop PUT route, and the
+manual recipe journal is an additive online-only flow. Recipe search, filters,
+archive, duplicate, production history, and version-history UI remain follow-up
+work explicitly tracked in the delivery handoff.
 
 # Architectural Direction and Delivery Baseline
 

@@ -57,6 +57,7 @@ Excluded:
 26. [Stable channel identity and YouTube binding](adr/ADR-026-stable-channel-identity-and-youtube-binding.md)
 27. [Shooter Workshop functional baseline](shooter-workshop.md)
 28. [Non-blocking shared Mongo index startup](adr/ADR-029-nonblocking-mongo-index-startup.md)
+29. [Shooter Workshop recipe journal](adr/ADR-030-shooter-workshop-recipe-journal.md)
 
 ## Architectural Baseline
 

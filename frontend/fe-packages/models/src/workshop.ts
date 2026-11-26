@@ -223,6 +223,36 @@ export interface UpdateWorkshopRecipeRequest
   idempotencyKey: string;
 }
 
+export type WorkshopRecipeJournalTimeOfDay =
+  | "Morning"
+  | "Noon"
+  | "Afternoon"
+  | "Evening";
+
+export interface WorkshopRecipeJournalEntry {
+  id: string;
+  recipeId: string;
+  entryDate: string;
+  timeOfDay?: WorkshopRecipeJournalTimeOfDay | null;
+  weather?: string | null;
+  temperature?: string | null;
+  temperatureUnit?: "C" | "F" | null;
+  powerFactor?: string | null;
+  notes?: string | null;
+  createdAt: string;
+}
+
+export interface CreateWorkshopRecipeJournalEntryRequest {
+  entryDate: string;
+  timeOfDay?: WorkshopRecipeJournalTimeOfDay | null;
+  weather?: string | null;
+  temperature?: string | null;
+  temperatureUnit?: "C" | "F" | null;
+  powerFactor?: string | null;
+  notes?: string | null;
+  idempotencyKey: string;
+}
+
 export interface WorkshopAmmunitionBatch {
   id: string;
   accountId: string;

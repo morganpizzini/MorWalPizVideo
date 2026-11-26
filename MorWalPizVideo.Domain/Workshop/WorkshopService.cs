@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Globalization;
 using MongoDB.Bson;
 using MorWalPizVideo.Models.Constraints;
 using MorWalPizVideo.Models.Models.Workshop;
@@ -39,6 +40,9 @@ public sealed record WorkshopShootingCommand(string FirearmId, DateTime Date, lo
     IReadOnlyList<ShootingRecipeConsumption> RecipeConsumptions, long UntrackedAmmunition,
     IReadOnlyList<ShootingUsageSegment> UsageSegments, string IdempotencyKey);
 public sealed record WorkshopProductionSelection(string LotId, long Quantity);
+public sealed record WorkshopRecipeJournalCommand(
+    string EntryDate, string? TimeOfDay, string? Weather, string? Temperature,
+    string? TemperatureUnit, string? PowerFactor, string? Notes, string IdempotencyKey);
 public sealed record WorkshopProductionCommand(string RecipeId, DateTime ProductionDate, long Quantity, string? Notes,
     string IdempotencyKey, long RecipeVersion = 0, string BulletProductId = "",
     IReadOnlyList<WorkshopProductionSelection>? PrimerLotAllocations = null,
@@ -183,6 +187,16 @@ public sealed partial class WorkshopService(
 
     public Task<IReadOnlyList<AmmoRecipe>> GetRecipesAsync(string accountId, CancellationToken ct = default) =>
         repository.ListAsync<AmmoRecipe>(DbCollections.WorkshopRecipes, accountId, ct);
+
+    public async Task<IReadOnlyList<WorkshopRecipeJournalEntry>?> GetRecipeJournalEntriesAsync(
+        string accountId, string recipeId, CancellationToken ct = default)
+    {
+        RequireAccount(accountId);
+        var recipe = await repository.GetAsync<AmmoRecipe>(DbCollections.WorkshopRecipes, accountId, recipeId, ct);
+        return recipe is null
+            ? null
+            : await repository.ListRecipeJournalEntriesAsync(accountId, recipeId, ct);
+    }
 
     public async Task<AmmoRecipe?> GetActiveRecipeAsync(
         string accountId, string recipeId, CancellationToken ct = default)
@@ -871,6 +885,55 @@ public sealed partial class WorkshopService(
         return recipe;
     }
 
+    public async Task<WorkshopRecipeJournalEntry> CreateRecipeJournalEntryAsync(
+        string accountId, string recipeId, WorkshopRecipeJournalCommand command, CancellationToken ct = default)
+    {
+        RequireAccount(accountId);
+        var normalized = NormalizeRecipeJournalCommand(command);
+        var payloadHash = RecipeJournalPayloadHash(recipeId, normalized);
+        var entryId = StableId(accountId, normalized.IdempotencyKey, "recipe-journal");
+        var existing = await repository.GetAsync<WorkshopRecipeJournalEntry>(
+            DbCollections.WorkshopRecipeJournalEntries, accountId, entryId, ct);
+        if (existing is not null)
+            return ConfirmRecipeJournalRetry(existing, recipeId, payloadHash);
+
+        var recipe = await repository.GetAsync<AmmoRecipe>(DbCollections.WorkshopRecipes, accountId, recipeId, ct)
+            ?? throw new WorkshopValidationException("Recipe was not found.");
+        if (recipe.Status == WorkshopRecipeStatus.Archived)
+            throw new WorkshopConflictException("Archived recipes cannot accept new journal entries.");
+
+        var entry = new WorkshopRecipeJournalEntry
+        {
+            Id = entryId,
+            AccountId = accountId,
+            RecipeId = recipeId,
+            EntryDate = normalized.EntryDate,
+            TimeOfDay = normalized.TimeOfDay,
+            Weather = normalized.Weather,
+            Temperature = normalized.Temperature,
+            TemperatureUnit = normalized.TemperatureUnit,
+            PowerFactor = normalized.PowerFactor,
+            Notes = normalized.Notes,
+            ClientIdempotencyKey = normalized.IdempotencyKey,
+            PayloadHash = payloadHash,
+            CreationDateTime = Now()
+        };
+
+        try
+        {
+            await repository.AddRecipeJournalEntryAsync(entry, ct);
+            return entry;
+        }
+        catch (WorkshopDuplicateRecipeJournalException)
+        {
+            existing = await repository.GetAsync<WorkshopRecipeJournalEntry>(
+                DbCollections.WorkshopRecipeJournalEntries, accountId, entryId, ct);
+            if (existing is null)
+                throw new WorkshopConflictException("The journal entry retry could not be resolved.");
+            return ConfirmRecipeJournalRetry(existing, recipeId, payloadHash);
+        }
+    }
+
     public async Task<WorkshopOperationResult> RecordShootingAsync(string accountId, WorkshopShootingCommand command, CancellationToken ct = default)
     {
         var requestHash = ClientRequestHash(command);
@@ -1445,6 +1508,81 @@ public sealed partial class WorkshopService(
                     (x.RemovedAt is null || x.RemovedAt > at)).ToArray();
     private static string NewId() => ObjectId.GenerateNewId().ToString();
     private static string? Trim(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+    private static WorkshopRecipeJournalCommand NormalizeRecipeJournalCommand(
+        WorkshopRecipeJournalCommand command)
+    {
+        var entryDate = Trim(command.EntryDate);
+        if (entryDate is null || !DateOnly.TryParseExact(entryDate, "yyyy-MM-dd",
+                CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsedDate))
+            throw new WorkshopValidationException("Entry date must be a valid calendar date.");
+
+        var idempotencyKey = Trim(command.IdempotencyKey);
+        if (idempotencyKey is null || idempotencyKey.Length > 80)
+            throw new WorkshopValidationException("Idempotency key is required and must be at most 80 characters.");
+
+        var timeOfDay = NormalizeJournalText(command.TimeOfDay, "Time of day", 20);
+        if (timeOfDay is not null &&
+            timeOfDay is not ("Morning" or "Noon" or "Afternoon" or "Evening"))
+            throw new WorkshopValidationException("Time of day is not supported.");
+
+        var weather = NormalizeJournalText(command.Weather, "Weather", 100);
+        var temperature = NormalizeJournalText(command.Temperature, "Temperature", 32);
+        var temperatureUnit = NormalizeJournalText(command.TemperatureUnit, "Temperature unit", 1)
+            ?.ToUpperInvariant();
+        if ((temperature is null) != (temperatureUnit is null))
+            throw new WorkshopValidationException("Temperature and unit must both be provided.");
+        if (temperatureUnit is not null && temperatureUnit is not ("C" or "F"))
+            throw new WorkshopValidationException("Temperature unit must be C or F.");
+        ValidateJournalDecimal(temperature, "Temperature");
+
+        var powerFactor = NormalizeJournalText(command.PowerFactor, "Power factor", 32);
+        ValidateJournalDecimal(powerFactor, "Power factor");
+        var notes = NormalizeJournalText(command.Notes, "Notes", 2000);
+        if (timeOfDay is null && weather is null && temperature is null &&
+            powerFactor is null && notes is null)
+            throw new WorkshopValidationException("Add at least one journal detail.");
+
+        return new(parsedDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture), timeOfDay,
+            weather, temperature, temperatureUnit, powerFactor, notes, idempotencyKey);
+    }
+
+    private static string? NormalizeJournalText(string? value, string name, int maximumLength)
+    {
+        var normalized = Trim(value);
+        if (normalized is not null && normalized.Length > maximumLength)
+            throw new WorkshopValidationException($"{name} must be at most {maximumLength} characters.");
+        return normalized;
+    }
+
+    private static void ValidateJournalDecimal(string? value, string name)
+    {
+        if (value is not null && !decimal.TryParse(value,
+                NumberStyles.AllowLeadingSign | NumberStyles.AllowDecimalPoint,
+                CultureInfo.InvariantCulture, out _))
+            throw new WorkshopValidationException($"{name} must be a decimal value.");
+    }
+
+    private static string RecipeJournalPayloadHash(string recipeId, WorkshopRecipeJournalCommand command) =>
+        Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(new
+        {
+            recipeId,
+            command.EntryDate,
+            command.TimeOfDay,
+            command.Weather,
+            command.Temperature,
+            command.TemperatureUnit,
+            command.PowerFactor,
+            command.Notes
+        })))).ToLowerInvariant();
+
+    private static WorkshopRecipeJournalEntry ConfirmRecipeJournalRetry(
+        WorkshopRecipeJournalEntry existing, string recipeId, string payloadHash)
+    {
+        if (existing.RecipeId != recipeId || existing.PayloadHash != payloadHash)
+            throw new WorkshopConflictException("Idempotency key was already used for a different journal entry.");
+        return existing;
+    }
+
     private static RecipeSnapshot NormalizeRecipe(RecipeSnapshot snapshot)
     {
         var oal = snapshot.Oal;

@@ -369,6 +369,77 @@ public sealed class WorkshopServiceTests
     }
 
     [Fact]
+    public async Task Recipe_journal_retries_are_idempotent_and_entries_remain_readable_after_archive()
+    {
+        var (service, scenario, _) = CreateService();
+        scenario.Add(DbCollections.WorkshopRecipes, new AmmoRecipe
+        {
+            Id = "recipe-1",
+            AccountId = "account-1",
+            Name = "Practice",
+            Caliber = "9x19",
+            Status = WorkshopRecipeStatus.Active
+        });
+        var command = new WorkshopRecipeJournalCommand(
+            " 2026-11-25 ", "Morning", " Clear ", "-2.50", "c", "123.40", " range note ", "journal-key");
+
+        var first = await service.CreateRecipeJournalEntryAsync("account-1", "recipe-1", command);
+        var retry = await service.CreateRecipeJournalEntryAsync("account-1", "recipe-1", command);
+
+        Assert.Equal(first.Id, retry.Id);
+        Assert.Equal("2026-11-25", first.EntryDate);
+        Assert.Equal("Clear", first.Weather);
+        Assert.Equal("-2.50", first.Temperature);
+        Assert.Equal("C", first.TemperatureUnit);
+        Assert.Equal("123.40", first.PowerFactor);
+        Assert.Equal("range note", first.Notes);
+        Assert.Single(scenario.Read<WorkshopRecipeJournalEntry>(DbCollections.WorkshopRecipeJournalEntries));
+        Assert.Null(await service.GetRecipeJournalEntriesAsync("account-2", "recipe-1"));
+
+        await Assert.ThrowsAsync<WorkshopConflictException>(() => service.CreateRecipeJournalEntryAsync(
+            "account-1", "recipe-1", command with { Notes = "changed payload" }));
+
+        scenario.Replace(DbCollections.WorkshopRecipes, new AmmoRecipe
+        {
+            Id = "recipe-1",
+            AccountId = "account-1",
+            Name = "Practice",
+            Caliber = "9x19",
+            Status = WorkshopRecipeStatus.Archived
+        });
+
+        var archivedEntries = await service.GetRecipeJournalEntriesAsync("account-1", "recipe-1");
+        Assert.Equal(first.Id, Assert.Single(archivedEntries!).Id);
+        Assert.Equal(first.Id, (await service.CreateRecipeJournalEntryAsync(
+            "account-1", "recipe-1", command)).Id);
+        await Assert.ThrowsAsync<WorkshopConflictException>(() => service.CreateRecipeJournalEntryAsync(
+            "account-1", "recipe-1", command with { IdempotencyKey = "new-journal-key" }));
+    }
+
+    [Fact]
+    public async Task Recipe_journal_validates_calendar_date_required_details_and_decimal_fields()
+    {
+        var (service, scenario, _) = CreateService();
+        scenario.Add(DbCollections.WorkshopRecipes, new AmmoRecipe
+        {
+            Id = "recipe-1",
+            AccountId = "account-1",
+            Name = "Practice",
+            Caliber = "9x19",
+            Status = WorkshopRecipeStatus.Active
+        });
+
+        await Assert.ThrowsAsync<WorkshopValidationException>(() => service.CreateRecipeJournalEntryAsync(
+            "account-1", "recipe-1", new("2026-02-29", null, null, null, null, null, null, "invalid-date")));
+        await Assert.ThrowsAsync<WorkshopValidationException>(() => service.CreateRecipeJournalEntryAsync(
+            "account-1", "recipe-1", new("2026-11-25", null, null, null, null, null, null, "empty-entry")));
+        await Assert.ThrowsAsync<WorkshopValidationException>(() => service.CreateRecipeJournalEntryAsync(
+            "account-1", "recipe-1", new("2026-11-25", null, null, "-2", null, null, null, "missing-unit")));
+        await Assert.ThrowsAsync<WorkshopValidationException>(() => service.CreateRecipeJournalEntryAsync(
+            "account-1", "recipe-1", new("2026-11-25", null, null, null, null, "not-a-number", null, "invalid-decimal")));
+    }
+
+    [Fact]
     public async Task Initial_firearm_rounds_are_recorded_in_the_ledger_projection()
     {
         var (service, scenario, _) = CreateService();

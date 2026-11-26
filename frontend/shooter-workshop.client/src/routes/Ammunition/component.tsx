@@ -73,10 +73,23 @@ function AmmunitionContent({ resources }: { resources: AmmunitionLoaderResources
                 {(recipes) => (
                   <DeferredRoute
                     data={resources.inventory}
-                    fallback={<Recipes recipes={recipes} inventory={null} inventoryLoading embedded />}
+                    fallback={
+                      <Recipes
+                        recipes={recipes}
+                        inventory={null}
+                        inventoryLoading
+                        journal={resources.recipeJournal}
+                        embedded
+                      />
+                    }
                   >
                     {(availability) => (
-                      <Recipes recipes={recipes} inventory={availability.inventory} embedded />
+                      <Recipes
+                        recipes={recipes}
+                        inventory={availability.inventory}
+                        journal={resources.recipeJournal}
+                        embedded
+                      />
                     )}
                   </DeferredRoute>
                 )}

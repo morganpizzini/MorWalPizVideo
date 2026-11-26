@@ -1,20 +1,28 @@
 import {
   getWorkshopBatches,
   getWorkshopProductionRecords,
+  getWorkshopRecipeJournalEntries,
   getWorkshopRecipes,
 } from "@morwalpizvideo/services";
+import type { WorkshopRecipeJournalEntry } from "@morwalpizvideo/models";
 import { loadOnlineInventory } from "../onlineInventory";
 import type { OnlineInventoryAvailability } from "../onlineInventory";
-import type { ShouldRevalidateFunctionArgs } from "react-router";
+import type { LoaderFunctionArgs, ShouldRevalidateFunctionArgs } from "react-router";
 
 export interface AmmunitionLoaderData {
   recipes: Awaited<ReturnType<typeof getWorkshopRecipes>>;
   batches: Awaited<ReturnType<typeof getWorkshopBatches>>;
 }
 
+export interface RecipeJournalLoaderData {
+  recipeId: string;
+  entries: WorkshopRecipeJournalEntry[];
+}
+
 export interface AmmunitionLoaderResources {
   recipes: ReturnType<typeof getWorkshopRecipes>;
   batches: ReturnType<typeof getWorkshopBatches>;
+  recipeJournal: Promise<RecipeJournalLoaderData | null>;
   inventory: Promise<OnlineInventoryAvailability>;
   productionRecords: ReturnType<typeof getWorkshopProductionRecords>;
   productionPanel: Promise<[
@@ -24,14 +32,26 @@ export interface AmmunitionLoaderResources {
   ]>;
 }
 
-export function loader() {
+export function loader({ request }: LoaderFunctionArgs) {
   const recipes = getWorkshopRecipes();
   const batches = getWorkshopBatches();
   const inventory = loadOnlineInventory();
   const productionRecords = getWorkshopProductionRecords();
+  const selectedRecipeId = new URL(request.url).searchParams.get("recipeId");
+  const recipeJournal = selectedRecipeId
+    ? recipes.then((loadedRecipes) =>
+        loadedRecipes.some((recipe) => recipe.id === selectedRecipeId)
+          ? getWorkshopRecipeJournalEntries(selectedRecipeId).then((entries) => ({
+              recipeId: selectedRecipeId,
+              entries,
+            }))
+          : null,
+      )
+    : Promise.resolve(null);
   return {
     recipes,
     batches,
+    recipeJournal,
     inventory,
     productionRecords,
     productionPanel: Promise.all([recipes, batches, productionRecords]),

@@ -1,19 +1,18 @@
 # Recipe journal handoff
 
-Status: proposed, awaiting user review. This is a plan, not an implementation.
+Status: implemented under the assumptions recorded below: append-only,
+online-only, and associated with the recipe rather than a historical version.
 
 ## Outcome
 
-Add a private, manual-entry journal table to each recipe's existing details.
-An entry records the date and any user-supplied time of day, weather,
-temperature, power factor and notes. Display the saved entries for that recipe.
-There are no calculations, assessments, recommendations or automatic weather
-lookups.
+Each recipe's details include a private, manual-entry journal table. Entries
+record the date and optional time of day, weather, temperature and unit, power
+factor, and notes. Saved entries are displayed for that recipe. There are no
+calculations, assessments, recommendations or automatic weather lookups.
 
-Assumptions for review: entries are append-only in this first slice; a date
-and at least one other field are required; users may leave unknown fields
-empty. The journal requires an online connection. These assumptions can be
-changed before implementation.
+Entries are append-only in this slice. A date and at least one other field are
+required; unknown fields may be left empty. The journal requires an online
+connection. Product decisions about these assumptions are listed at the end.
 
 ## Current Evidence
 
@@ -44,7 +43,7 @@ changed before implementation.
   No Workshop-specific PRODUCT.md or DESIGN.md was found in the inspected tree;
   the existing application UI is the visual authority.
 
-## Proposed Design
+## Implemented Design
 
 ### Data and interaction
 
@@ -213,48 +212,68 @@ fetching, a second weather service, or a new shared UI abstraction.
   selection, editing/deleting entries, exports, analytics and offline sync are
   outside this slice.
 
-## Implementation Roadmap
+## Implementation Record
 
-1. Agree on the assumptions and fields. Confirm that the journal is descriptive
-   only and that append-only/online-only behavior is acceptable.
-2. Add the separate document and DTOs, scoped query and index manifest. Verify
-   old recipe documents and old clients remain untouched.
-3. Implement validation, ownership, single-insert idempotency and authenticated
-   endpoints. Gate on focused service, retry, isolation and CSRF tests.
-4. Add shared client contracts and services, then route-owned loading/actions
-   and the localized table/form. Gate on route and component tests and shared
-   package builds in dependency order.
-5. Update the Workshop architecture and this handoff. Verify desktop and mobile
-   layouts, keyboard operation, labels, pending/error/empty states, both
-   languages and dark/light themes.
-6. Request an independent post-validation review: this change crosses
-   authentication, persistence and retry boundaries. Stop after the agreed
-   journal scope; additional features need separate approval.
+### Actual files changed
 
-Impeccable implementation lens: **Operate**, existing-surface refinement;
-use the narrow `shape` workflow for the entry form/table, preserving incumbent
-visual conventions. Capture one desktop and one narrow-screen rendered view,
-including empty, populated and error states, and check keyboard/accessibility.
-Do not redesign the application or introduce design artifacts solely for this
-feature.
+- Persistence, service and API: [DbCollections.cs](../../MorWalPizVideo.Models/Constraints/DbCollections.cs),
+  [WorkshopEntities.cs](../../MorWalPizVideo.Models/Models/Workshop/WorkshopEntities.cs),
+  [WorkshopRepository.cs](../../MorWalPizVideo.Domain/Workshop/WorkshopRepository.cs),
+  [WorkshopService.cs](../../MorWalPizVideo.Domain/Workshop/WorkshopService.cs),
+  [PrimaryScenario.cs](../../MorWalPizVideo.Domain/Scenarios/PrimaryScenario.cs),
+  [WorkshopContracts.cs](../../MorWalPiz.Contracts/Contracts/Workshop/WorkshopContracts.cs),
+  and [WorkshopController.cs](../../MorWalPizVideo.ServerAPI/Controllers/Workshop/WorkshopController.cs).
+- Shared frontend contract and transport: [workshop.ts](../../frontend/fe-packages/models/src/workshop.ts),
+  [models index.ts](../../frontend/fe-packages/models/src/index.ts),
+  [endpoints-frontend.ts](../../frontend/fe-packages/services/src/endpoints-frontend.ts),
+  [workshopService.ts](../../frontend/fe-packages/services/src/workshopService.ts),
+  and [services index.ts](../../frontend/fe-packages/services/src/index.ts).
+- Route and UI: [Ammunition loader](../../frontend/shooter-workshop.client/src/routes/Ammunition/loader.ts),
+  [Ammunition action](../../frontend/shooter-workshop.client/src/routes/Ammunition/action.ts),
+  [Ammunition component](../../frontend/shooter-workshop.client/src/routes/Ammunition/component.tsx),
+  [Recipes action](../../frontend/shooter-workshop.client/src/routes/Recipes/action.ts),
+  [Recipes component](../../frontend/shooter-workshop.client/src/routes/Recipes/component.tsx),
+  [i18n.tsx](../../frontend/shooter-workshop.client/src/i18n.tsx),
+  and [main.scss](../../frontend/shooter-workshop.client/src/main.scss).
+- Focused tests: [WorkshopServiceTests.cs](../../MorWalPizVideo.BackOffice.Tests/Features/WorkshopServiceTests.cs),
+  [PublicAccountEndpointTests.cs](../../MorWalPizVideo.BackOffice.Tests/Features/PublicAccountEndpointTests.cs),
+  [MongoIndexOperationsTests.cs](../../MorWalPizVideo.BackOffice.Tests/Features/MongoIndexOperationsTests.cs),
+  [Ammunition route tests](../../frontend/shooter-workshop.client/src/routes/Ammunition/route.test.ts),
+  [Recipes route tests](../../frontend/shooter-workshop.client/src/routes/Recipes/route.test.ts),
+  and [Recipes component tests](../../frontend/shooter-workshop.client/src/routes/Recipes/component.test.tsx).
+- Architecture: [shooter-workshop.md](../architecture/shooter-workshop.md),
+  [architecture-decisions.md](../architecture/architecture-decisions.md),
+  [README.md](../architecture/README.md),
+  and [ADR-030](../architecture/adr/ADR-030-shooter-workshop-recipe-journal.md).
 
-## Testing Strategy
+### Validation performed
 
-- Service tests: round-trip all supplied fields, missing optional fields,
-  negative temperature, invalid date/decimal/unit, empty payload, archive
-  policy, recipe changes, cross-account access and idempotent retry/conflict.
-  Include real-provider concurrent insert/index proof where available; mocks
-  alone cannot prove Mongo uniqueness behavior.
-- API integration: authenticated read/create, unauthorized access, missing CSRF,
-  another account's recipe, malformed request and conflict response.
-- Frontend route/component: URL selection and revalidation, table order and
-  empty state, all form fields, validation, failure preserving draft, retry key,
-  successful refresh, keyboard interaction and Italian/English labels.
-- Contract: preserve supplied decimal text, temperature unit and calendar date
-  across serialization; check additive compatibility with old clients.
-- End-to-end: signed-in user adds and reloads an entry; a second account cannot
-  see it; verify network loss is visible. No data migration test is required,
-  but exercise an existing recipe with no journal documents.
+- BackOffice.Tests Release build passed with zero errors; four focused
+  `Recipe_journal` tests passed.
+- `yarn workspace @morwalpizvideo/models build` passed.
+- `yarn workspace @morwalpizvideo/services build` passed.
+- Focused Shooter Workshop tests passed: 3 files, 19 tests, covering route
+  loading/submission, URL selection, journal display, archived recipes, and
+  retry-key/draft retention.
+- `yarn workspace shooter-workshop.client build` passed, including TypeScript
+  compilation and the Vite production build.
+
+### Not verified / residual risks
+
+- No live MongoDB provider test or deployed index audit/application was
+  performed. The source index is non-unique; deterministic document IDs
+  implement idempotency.
+- No authenticated browser capture or live same-origin API session was run.
+  The existing Playwright gate requires a local ServerAPI started with
+  `EnableMock=true`.
+- The backend build emitted existing package, nullable and analyzer warnings,
+  including advisories for the existing `SixLabors.ImageSharp` version; these
+  were not changed as part of this feature.
+
+Impeccable implementation lens: **Operate**, existing-surface refinement.
+The form/table follows the existing application visual conventions. Automated
+component tests and the production build passed; desktop/mobile rendered
+captures and visual theme checks remain outstanding.
 
 ## Migration And Rollback
 
@@ -266,11 +285,11 @@ intact and restore the API to recover access. Do not delete user-entered data
 as a rollback shortcut. No offline outbox, feature flag or configuration
 migration is introduced.
 
-## Open Questions
+## Product decisions retained as assumptions
 
-1. Is append-only acceptable, or must users be able to edit/delete mistaken
-   entries in the first release?
-2. Is an online-only journal acceptable, and should temperature support both
-   Celsius and Fahrenheit?
-3. Should an entry identify a specific historical recipe version, rather than
-   only the recipe? A backdated date alone cannot establish that version.
+1. The first release is append-only. Editing or deleting entries would be a
+   separate behavior change.
+2. The journal is online-only and supports Celsius or Fahrenheit, without
+   conversion.
+3. Entries identify the recipe, not a historical recipe version. A backdated
+   date alone cannot establish that version.

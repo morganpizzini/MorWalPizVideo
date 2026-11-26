@@ -84,6 +84,8 @@ export {
   getWorkshopRecipe,
   createWorkshopRecipe,
   updateWorkshopRecipe,
+  getWorkshopRecipeJournalEntries,
+  createWorkshopRecipeJournalEntry,
   getWorkshopBatches,
   getWorkshopInventory,
   createWorkshopInventoryProduct,

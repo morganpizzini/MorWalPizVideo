@@ -178,6 +178,31 @@ public sealed class ArchiveWorkshopRecipeRequest
     [Required, StringLength(80)] public string IdempotencyKey { get; init; } = string.Empty;
 }
 
+public sealed class CreateWorkshopRecipeJournalEntryRequest
+{
+    [Required, StringLength(10, MinimumLength = 10), RegularExpression(@"^\d{4}-\d{2}-\d{2}$")]
+    public string EntryDate { get; init; } = string.Empty;
+    [StringLength(20)] public string? TimeOfDay { get; init; }
+    [StringLength(100)] public string? Weather { get; init; }
+    [StringLength(32)] public string? Temperature { get; init; }
+    [StringLength(1)] public string? TemperatureUnit { get; init; }
+    [StringLength(32)] public string? PowerFactor { get; init; }
+    [StringLength(2000)] public string? Notes { get; init; }
+    [Required, StringLength(80)] public string IdempotencyKey { get; init; } = string.Empty;
+}
+
+public sealed record WorkshopRecipeJournalEntryContract(
+    string Id,
+    string RecipeId,
+    string EntryDate,
+    string? TimeOfDay,
+    string? Weather,
+    string? Temperature,
+    string? TemperatureUnit,
+    string? PowerFactor,
+    string? Notes,
+    DateTime CreatedAt);
+
 public class RecordWorkshopProductionRequest
 {
     [Required] public string RecipeId { get; init; } = string.Empty;

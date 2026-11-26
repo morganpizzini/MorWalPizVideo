@@ -24,6 +24,7 @@ import type {
   CorrectWorkshopComponentPurchaseRequest,
   CreateWorkshopRecipeRequest,
   UpdateWorkshopRecipeRequest,
+  CreateWorkshopRecipeJournalEntryRequest,
   CreateWorkshopShootingRequest,
   CorrectWorkshopShootingRequest,
   WorkshopActivity,
@@ -42,6 +43,7 @@ import type {
   WorkshopComponentInstallation,
   CreateAndInstallWorkshopComponentResponse,
   WorkshopRecipe,
+  WorkshopRecipeJournalEntry,
   WorkshopReconciliationStatus,
   WorkshopMaintenanceEvent,
   WorkshopDashboard,
@@ -223,6 +225,22 @@ export const updateWorkshopRecipe = (
 ): Promise<WorkshopRecipe> =>
   request(accountApiService.put(
     `${frontendEndpoints.WORKSHOP_RECIPES}/${encodeURIComponent(recipeId)}`,
+    body,
+  ));
+
+export const getWorkshopRecipeJournalEntries = (
+  recipeId: string,
+): Promise<WorkshopRecipeJournalEntry[]> =>
+  request(accountApiService.get(
+    frontendEndpoints.WORKSHOP_RECIPE_JOURNAL.replace("{recipeId}", encodeURIComponent(recipeId)),
+  ));
+
+export const createWorkshopRecipeJournalEntry = (
+  recipeId: string,
+  body: CreateWorkshopRecipeJournalEntryRequest,
+): Promise<WorkshopRecipeJournalEntry> =>
+  request(accountApiService.post(
+    frontendEndpoints.WORKSHOP_RECIPE_JOURNAL.replace("{recipeId}", encodeURIComponent(recipeId)),
     body,
   ));
 

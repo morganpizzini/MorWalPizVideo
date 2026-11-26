@@ -113,6 +113,7 @@ public class PrimaryScenario : BaseScenario
         Set(DbCollections.WorkshopMaintenanceEvents, Array.Empty<MaintenanceEvent>());
         Set(DbCollections.WorkshopRecipes, Array.Empty<AmmoRecipe>());
         Set(DbCollections.WorkshopRecipeVersions, Array.Empty<AmmoRecipeVersion>());
+        Set(DbCollections.WorkshopRecipeJournalEntries, Array.Empty<WorkshopRecipeJournalEntry>());
         Set(DbCollections.WorkshopProductionSessions, Array.Empty<ProductionSession>());
         Set(DbCollections.WorkshopAmmoBatches, Array.Empty<AmmoBatch>());
         Set(DbCollections.WorkshopSupplyProducts, Array.Empty<WorkshopSupplyProduct>());

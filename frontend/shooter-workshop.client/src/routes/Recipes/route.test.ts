@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { WorkshopRecipe } from "@morwalpizvideo/models";
 import {
+  createWorkshopRecipeJournalEntry,
   createWorkshopRecipe,
   getWorkshopInventory,
   getWorkshopRecipes,
@@ -12,6 +13,7 @@ import { loader } from "./loader";
 
 vi.mock("@morwalpizvideo/services", () => ({
   createWorkshopRecipe: vi.fn(),
+  createWorkshopRecipeJournalEntry: vi.fn(),
   getWorkshopInventory: vi.fn(),
   getWorkshopRecipes: vi.fn(),
   updateWorkshopRecipe: vi.fn(),
@@ -93,6 +95,47 @@ describe("Recipes route data functions", () => {
       powderProductId: "powder-1",
       powderWeight: 4.2,
       notes: "range load",
+    });
+  });
+
+  it("submits journal entries with the form's stable idempotency key", async () => {
+    vi.mocked(createWorkshopRecipeJournalEntry).mockResolvedValue({
+      id: "journal-1",
+      recipeId: "recipe-1",
+      entryDate: "2026-11-25",
+      weather: "Clear",
+      temperature: "-2.50",
+      temperatureUnit: "C",
+      powerFactor: "123.40",
+      createdAt: "2026-11-25T10:00:00Z",
+    });
+
+    await expect(
+      action({
+        request: request({
+          intent: "journal-create",
+          recipeId: "recipe-1",
+          idempotencyKey: "stable-journal-key",
+          entryDate: "2026-11-25",
+          timeOfDay: "Evening",
+          weather: "Clear",
+          temperature: "-2.50",
+          temperatureUnit: "C",
+          powerFactor: "123.40",
+          notes: "range note",
+        }),
+      } as never),
+    ).resolves.toEqual({ ok: true, intent: "journal-create" });
+
+    expect(createWorkshopRecipeJournalEntry).toHaveBeenCalledWith("recipe-1", {
+      entryDate: "2026-11-25",
+      timeOfDay: "Evening",
+      weather: "Clear",
+      temperature: "-2.50",
+      temperatureUnit: "C",
+      powerFactor: "123.40",
+      notes: "range note",
+      idempotencyKey: "stable-journal-key",
     });
   });
 
