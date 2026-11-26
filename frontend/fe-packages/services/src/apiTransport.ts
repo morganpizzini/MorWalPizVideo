@@ -1117,8 +1117,8 @@ export function createApiClient({
               );
             if (
               onUnauthorized &&
-              !isAccountAuthenticationRequest &&
-              !csrfInvalid
+              response.status === 401 &&
+              !isAccountAuthenticationRequest
             ) {
               onUnauthorized();
             }

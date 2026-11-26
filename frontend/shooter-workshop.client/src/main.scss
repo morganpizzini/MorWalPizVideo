@@ -291,10 +291,10 @@ table { width: 100%; border-collapse: collapse; min-width: 600px; } th, td { pad
 .inventory-finance-column h3, .inventory-forms-grid h3 { margin-top: 0; color: var(--workshop-accent); }
 .inventory-currency-list { display: grid; gap: .55rem; margin: .6rem 0; padding: 0; list-style: none; }
 .inventory-currency-list li { display: flex; justify-content: space-between; gap: 1rem; padding: .55rem 0; border-bottom: 1px solid var(--workshop-border); font-variant-numeric: tabular-nums; }
-.inventory-component-list { display: grid; gap: 1rem; }
+.inventory-component-list { display: grid; }
 .inventory-component-row { display: grid; grid-template-columns: minmax(13rem, .8fr) minmax(0, 1.2fr); align-items: start; gap: 1.25rem; padding: 1rem 0; border-top: 1px solid var(--workshop-border); }
 .inventory-component-row h3 { margin: 0; overflow-wrap: anywhere; }
-.inventory-component-row p, .inventory-policy-note p { color: var(--workshop-secondary); }
+.inventory-component-row p, .inventory-policy-note p { color: var(--workshop-secondary); margin-bottom: 0px; }
 .inventory-component-actions { display: flex; justify-content: flex-end; align-items: flex-start; }
 .inventory-mutation-form > .button-primary { display: flex; margin: 1rem 0 0 auto; }
 .inventory-mutation-form .form-grid { gap: .75rem; }

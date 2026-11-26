@@ -3,9 +3,14 @@ import { transferableAbortController } from "node:util";
 import { URLSearchParams as NodeURLSearchParams } from "node:url";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { WorkshopRecipe, WorkshopRecipeJournalEntry } from "@morwalpizvideo/models";
+import { ApiResponseError } from "@morwalpizvideo/services";
 import { createMemoryRouter, RouterProvider, useLocation } from "react-router";
 import { I18nProvider } from "../../i18n";
 import Recipes from "./component";
+
+vi.mock("../../components/feedback/FeedbackProvider", () => ({
+  useFeedback: () => ({ open: vi.fn() }),
+}));
 
 class NodeCompatibleAbortController {
   private readonly controller = transferableAbortController();
@@ -125,6 +130,29 @@ describe("Recipes", () => {
     expect(closedParams.get("recipeId")).toBeNull();
     expect(closedParams.get("tab")).toBe("recipes");
     expect(closedParams.get("filter")).toBe("active");
+  });
+
+  it("keeps recipe details open and shows a journal load error", async () => {
+    const journal = Promise.reject(new ApiResponseError({ status: 404, errors: ["Journal unavailable"] }));
+    void journal.catch(() => {});
+    const router = createMemoryRouter([
+      {
+        path: "/ammunition",
+        element: <Recipes recipes={recipes} inventory={null} journal={journal} embedded />,
+      },
+    ], { initialEntries: ["/ammunition?tab=recipes"] });
+
+    render(
+      <I18nProvider>
+        <RouterProvider router={router} />
+      </I18nProvider>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /recipe details/i }));
+    const dialog = screen.getByRole("dialog", { name: "Practice" });
+    expect((await within(dialog).findByRole("alert")).textContent).toContain("Journal unavailable");
+    expect(within(dialog).getByText("Recipe journal")).toBeTruthy();
+    expect(router.state.location.search).toContain("recipeId=recipe-1");
   });
 
   it("reuses the journal idempotency key and preserves the draft after an uncertain save", async () => {

@@ -19,6 +19,34 @@ describe("account API unauthorized handling", () => {
     expect(unauthorized).toHaveBeenCalledOnce();
   });
 
+  it("invokes the handler for an empty 401 response", async () => {
+    const unauthorized = vi.fn();
+    const client = createApiClient({ mode: "account", baseUrl: "https://account.test" });
+    client.setUnauthorizedHandler(unauthorized);
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(null, { status: 401 })));
+
+    expect(await client.get("/api/v1/workshop/recipes/recipe-1/journal")).toMatchObject({ status: 401 });
+    expect(unauthorized).toHaveBeenCalledOnce();
+  });
+
+  it.each([400, 403, 404, 409, 429, 500])(
+    "preserves a %i error without invoking the unauthorized handler",
+    async (status) => {
+      const unauthorized = vi.fn();
+      const client = createApiClient({ mode: "account", baseUrl: "https://account.test" });
+      client.setUnauthorizedHandler(unauthorized);
+      vi.stubGlobal("fetch", vi.fn().mockResolvedValue(
+        Response.json({ detail: "Request failed" }, { status }),
+      ));
+
+      expect(await client.get("/api/v1/workshop/recipes/recipe-1/journal")).toMatchObject({
+        status,
+        errors: ["Request failed"],
+      });
+      expect(unauthorized).not.toHaveBeenCalled();
+    },
+  );
+
   it("does not invoke the handler for account authentication requests", async () => {
     const unauthorized = vi.fn();
     const client = createApiClient({ mode: "account", baseUrl: "https://account.test" });
