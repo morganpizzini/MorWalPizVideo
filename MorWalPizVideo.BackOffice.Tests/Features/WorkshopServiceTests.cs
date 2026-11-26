@@ -691,6 +691,10 @@ public sealed class WorkshopServiceTests
             new(componentDefinition.Id, null, null, null, null, null, null, null, 0, null));
         var componentPrice = await service.RecordComponentPurchaseAsync("account-1", component.Id,
             DateTime.UtcNow.AddDays(-5), 15m, "USD", "component-purchase-1");
+        var componentPurchaseActivity = scenario.Read<WorkshopActivity>(DbCollections.WorkshopActivities)
+            .Single(x => x.Type == WorkshopOperationType.ComponentPurchaseRecorded);
+        Assert.Equal("Component purchase recorded", componentPurchaseActivity.Summary);
+        Assert.Equal("Part", componentPurchaseActivity.EntityLabel);
         var created = await service.RecordProductionWithSuppliesAsync("account-1",
             new(recipe.Id, DateTime.UtcNow, 4, null, "inventory-production", recipe.Version,
                 bullet.Id, [new(primerPurchase.Lots.Single().Id, 4)],
@@ -703,6 +707,10 @@ public sealed class WorkshopServiceTests
             .Single(x => x.Id == primerPurchase.Lots.Single().Id);
         await service.AdjustSupplyStockAsync("account-1", primerLot.Id, 3, primerLot.Revision,
             "physical recount", "inventory-adjust");
+        var stockActivity = scenario.Read<WorkshopActivity>(DbCollections.WorkshopActivities)
+            .Single(x => x.Type == WorkshopOperationType.SupplyStockAdjusted);
+        Assert.Equal("Supply stock corrected", stockActivity.Summary);
+        Assert.Equal("Primer", stockActivity.EntityLabel);
         var afterAdjustment = await service.GetInventoryAsync("account-1");
         Assert.Equal(17m, Assert.Single(afterAdjustment.PartialConsumptionCosts).Total);
 
@@ -768,12 +776,23 @@ public sealed class WorkshopServiceTests
         var retried = await service.UpdateSupplyProductAsync("account-1", product.Id,
             "Fiocchi", "Small rifle primer", product.Revision, "lifecycle-edit");
 
+        var activities = scenario.Read<WorkshopActivity>(DbCollections.WorkshopActivities);
+        var createdActivity = activities.Single(x => x.Type == WorkshopOperationType.SupplyProductCreated);
+        var updatedActivity = activities.Single(x => x.Type == WorkshopOperationType.SupplyProductUpdated);
+        Assert.Equal("Supply product added", createdActivity.Summary);
+        Assert.Equal("Primer", createdActivity.EntityLabel);
+        Assert.Equal("Supply product updated", updatedActivity.Summary);
+        Assert.Equal("Fiocchi Small rifle primer", updatedActivity.EntityLabel);
         Assert.Equal("Fiocchi", updated.Brand);
         Assert.Equal("Small rifle primer", updated.Name);
         Assert.Equal(updated.Revision, retried.Revision);
         Assert.Equal(product.Type, updated.Type);
         await service.DeleteSupplyProductAsync("account-1", product.Id, updated.Revision, "lifecycle-delete");
         await service.DeleteSupplyProductAsync("account-1", product.Id, updated.Revision, "lifecycle-delete");
+        var deletedActivity = scenario.Read<WorkshopActivity>(DbCollections.WorkshopActivities)
+            .Single(x => x.Type == WorkshopOperationType.SupplyProductDeleted);
+        Assert.Equal("Supply product deleted", deletedActivity.Summary);
+        Assert.Equal("Fiocchi Small rifle primer", deletedActivity.EntityLabel);
         Assert.Empty(scenario.Read<WorkshopSupplyProduct>(DbCollections.WorkshopSupplyProducts));
     }
 

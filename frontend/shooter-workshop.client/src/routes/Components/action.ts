@@ -6,6 +6,7 @@ import {
   deleteWorkshopComponent,
   deleteWorkshopComponentDefinition,
   installWorkshopComponent,
+  recordWorkshopComponentPurchase,
   removeWorkshopComponent,
   updateWorkshopComponent,
   updateWorkshopComponentDefinition,
@@ -108,80 +109,146 @@ export async function action({ request }: ActionFunctionArgs) {
       await deleteWorkshopComponentDefinition(id, { revision: revision(form), idempotencyKey });
       break;
     case "create-component": {
-      const request: CreateAndInstallWorkshopComponentRequest = {
-        definitionId: required(form, "definitionId"),
-        firearmId: text(form, "firearmId"),
-        installedAt: new Date().toISOString(),
-        identificationNote: text(form, "identificationNote"),
-        manufacturer: text(form, "manufacturer"),
-        model: text(form, "model"),
-        serviceInterval: text(form, "serviceInterval") ? Number(form.get("serviceInterval")) : null,
-        trackingMode: required(form, "trackingMode") as "Counter" | "Interval" | "Manual",
-        compatibilityTags: tags(form),
-        notes: text(form, "notes"),
-        initialRounds: nonNegativeNumber(form, "initialRounds"),
-        idempotencyKey,
-      };
-      const accountId = getRememberedAccountId() ?? "";
-      const localComponentId = `local:${crypto.randomUUID()}`;
-      const localInstallationId = `local:${crypto.randomUUID()}`;
-      const component = accountId ? componentSnapshot(accountId, localComponentId, request) : null;
-      const installation = accountId && request.firearmId
-        ? installationSnapshot(accountId, localInstallationId, localComponentId, request.firearmId, request.installedAt)
-        : null;
+      const quantityValue = form.get("componentQuantity");
+      const quantity = quantityValue === null || quantityValue === "" ? 1 : Number(quantityValue);
+      if (!Number.isSafeInteger(quantity) || quantity < 1 || quantity > 100)
+        return { ok: false as const, intent, error: "Enter a quantity from 1 to 100." };
+      const priceValue = form.get("unitPrice");
+      const priceText = typeof priceValue === "string" ? priceValue.trim() : "";
+      const unitPrice = priceText ? Number(priceText) : null;
+      if (priceText && (!/^\d+(?:\.\d{1,2})?$/.test(priceText) || !Number.isFinite(unitPrice) || unitPrice! < 0))
+        return { ok: false as const, intent, error: "Enter a valid non-negative price with up to two decimal places." };
+      const purchaseDate = text(form, "purchaseDate");
+      const currencyValue = text(form, "currency");
+      if (unitPrice !== null && (!purchaseDate || !/^\d{4}-\d{2}-\d{2}$/.test(purchaseDate) ||
+          Number.isNaN(Date.parse(`${purchaseDate}T00:00:00Z`)) || !currencyValue || !/^[A-Za-z]{3}$/.test(currencyValue)))
+        return { ok: false as const, intent, error: "Enter a valid purchase date and three-letter currency code." };
+      if (quantity > 1 && (text(form, "firearmId") || text(form, "replacementInstallationId")))
+        return { ok: false as const, intent, error: "Bulk creation adds uninstalled spare components. Create one component to install or replace it." };
+      const needsOnline = quantity > 1 || unitPrice !== null;
+      if (needsOnline && typeof navigator !== "undefined" && !navigator.onLine)
+        return { ok: false as const, intent, error: "Bulk creation and purchase prices require an online connection." };
+
+      const creationKey = required(form, "creationIdempotencyKey") || idempotencyKey;
       const replacementInstallationId = text(form, "replacementInstallationId");
-      if (replacementInstallationId) {
-        const removal = {
-          removedAt: request.installedAt,
-          removalNotes: null,
-          revision: revision(form, "replacementInstallationRevision"),
-          idempotencyKey: `${idempotencyKey}:remove`,
-        };
-        const swapRequest = {
-          installationId: replacementInstallationId,
-          removal,
-          replacement: request,
-        };
-        const existingInstallation = JSON.parse(text(form, "replacementInstallation") || "null") as
-          | { id: string; accountId: string; componentId: string; firearmId: string; installedAt: string; revision: number }
-          | null;
-        const result = await runOrQueueOffline(
-          async () => {
-            await removeWorkshopComponent(replacementInstallationId, removal);
-            return createAndInstallWorkshopComponent(request);
-          },
-          "component-swap",
-          { request: swapRequest },
-          accountId && component && installation && existingInstallation
-            ? {
-                components: { upsert: [component] },
-                installations: {
-                  upsert: [
-                    { ...existingInstallation, removedAt: request.installedAt },
-                    installation,
-                  ],
+      const accountId = getRememberedAccountId() ?? "";
+      const installedAt = new Date().toISOString();
+      let completedCount = 0;
+      let mutationStarted = false;
+      try {
+        for (let index = 0; index < quantity; index++) {
+          const itemKey = `${creationKey}:${index + 1}`;
+          const request: CreateAndInstallWorkshopComponentRequest = {
+            definitionId: required(form, "definitionId"),
+            firearmId: text(form, "firearmId"),
+            installedAt,
+            identificationNote: text(form, "identificationNote"),
+            manufacturer: text(form, "manufacturer"),
+            model: text(form, "model"),
+            serviceInterval: text(form, "serviceInterval") ? Number(form.get("serviceInterval")) : null,
+            trackingMode: required(form, "trackingMode") as "Counter" | "Interval" | "Manual",
+            compatibilityTags: tags(form),
+            notes: text(form, "notes"),
+            initialRounds: nonNegativeNumber(form, "initialRounds"),
+            idempotencyKey: itemKey,
+          };
+
+          if (!needsOnline) {
+            const localComponentId = `local:${crypto.randomUUID()}`;
+            const localInstallationId = `local:${crypto.randomUUID()}`;
+            const component = accountId ? componentSnapshot(accountId, localComponentId, request) : null;
+            const installation = accountId && request.firearmId
+              ? installationSnapshot(accountId, localInstallationId, localComponentId, request.firearmId, installedAt)
+              : null;
+            if (replacementInstallationId) {
+              const removal = {
+                removedAt: installedAt,
+                removalNotes: null,
+                revision: revision(form, "replacementInstallationRevision"),
+                idempotencyKey: `${itemKey}:remove`,
+              };
+              const existingInstallation = JSON.parse(text(form, "replacementInstallation") || "null") as
+                | { id: string; accountId: string; componentId: string; firearmId: string; installedAt: string; revision: number }
+                | null;
+              const result = await runOrQueueOffline(
+                async () => {
+                  await removeWorkshopComponent(replacementInstallationId, removal);
+                  mutationStarted = true;
+                  return createAndInstallWorkshopComponent(request);
                 },
-              }
-            : undefined,
-          { component: localComponentId, installation: localInstallationId },
-        );
-        if (result.offline) return { ok: true as const, intent, offline: true };
-        return { ok: true as const, intent, partial: false };
-      }
-      const result = await runOrQueueOffline(
-        () => createAndInstallWorkshopComponent(request),
-        "component-create",
-        { request },
-        accountId && component
-          ? {
-              components: { upsert: [component] },
-              ...(installation ? { installations: { upsert: [installation] } } : {}),
+                "component-swap",
+                { request: { installationId: replacementInstallationId, removal, replacement: request } },
+                accountId && component && installation && existingInstallation
+                  ? {
+                      components: { upsert: [component] },
+                      installations: {
+                        upsert: [
+                          { ...existingInstallation, removedAt: installedAt },
+                          installation,
+                        ],
+                      },
+                    }
+                  : undefined,
+                { component: localComponentId, installation: localInstallationId },
+              );
+              if (result.offline) return { ok: true as const, intent, offline: true };
+            } else {
+              const result = await runOrQueueOffline(
+                () => createAndInstallWorkshopComponent(request),
+                "component-create",
+                { request },
+                accountId && component
+                  ? {
+                      components: { upsert: [component] },
+                      ...(installation ? { installations: { upsert: [installation] } } : {}),
+                    }
+                  : undefined,
+                { component: localComponentId, installation: localInstallationId },
+              );
+              if (result.offline) return { ok: true as const, intent, offline: true };
             }
-          : undefined,
-        { component: localComponentId, installation: localInstallationId },
-      );
-      if (result.offline) return { ok: true as const, intent, offline: true };
-      break;
+            mutationStarted = true;
+            completedCount++;
+            continue;
+          }
+
+          if (replacementInstallationId) {
+            await removeWorkshopComponent(replacementInstallationId, {
+              removedAt: installedAt,
+              removalNotes: null,
+              revision: revision(form, "replacementInstallationRevision"),
+              idempotencyKey: `${itemKey}:remove`,
+            });
+            mutationStarted = true;
+          }
+          const created = await createAndInstallWorkshopComponent(request);
+          mutationStarted = true;
+          if (unitPrice !== null) {
+            await recordWorkshopComponentPurchase(created.component.id, {
+              purchaseDate: purchaseDate!,
+              totalPrice: unitPrice,
+              currency: currencyValue!.toUpperCase(),
+              idempotencyKey: `${itemKey}:purchase`,
+            });
+          }
+          completedCount++;
+        }
+      } catch (error) {
+        const detail = error instanceof Error ? error.message : "The request could not be completed.";
+        const progress = mutationStarted
+          ? `Created or changed ${completedCount} of ${quantity} components.`
+          : "No component creation was confirmed.";
+        return {
+          ok: false as const,
+          intent,
+          partial: mutationStarted,
+          error: mutationStarted
+            ? "Component batch creation was interrupted. Retry without changing the form to resume safely."
+            : "Component creation failed.",
+          details: `${progress} ${detail}`,
+        };
+      }
+      return { ok: true as const, intent, createdCount: completedCount };
     }
     case "update-component":
       await updateWorkshopComponent(id, {

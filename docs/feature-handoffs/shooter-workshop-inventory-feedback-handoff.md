@@ -1,8 +1,8 @@
 # Shooter Workshop inventory feedback handoff
 
-Status: implemented; focused backend/frontend checks and the Workshop client
-production build passed. Visual browser capture and live-server rollout checks
-were not run.
+Status: implemented, including the follow-up Workshop UX updates. Focused
+backend/frontend checks and the Workshop client production build passed. Visual
+browser capture and live-server rollout checks were not run.
 
 ## Delivered implementation
 
@@ -30,6 +30,21 @@ were not run.
 - The current enum and explicit request fields remain in place. A C# union would
   add serialization and compatibility work without solving the casing mismatch
   or per-purchase package snapshot requirement.
+- Physical-component creation supports quantities from 1 to 100. Batch creation
+  makes distinct component records with stable per-item idempotency keys; an
+  optional entered price is treated as a per-component amount and recorded for
+  each instance. Batch creation and price recording require connectivity;
+  single unpriced component creation retains the existing offline queue behavior.
+  Batch-created components remain uninstalled spares, since a batch cannot
+  unambiguously replace or install multiple components on one firearm.
+- Purchase-lot stock count and package-status forms now open in the existing
+  accessible dialog. Supply-product row actions use a compact right-aligned
+  group, and physical-component price actions align to the right of their rows.
+- Activity titles now cover the inventory, component purchase and production
+  correction operation types. New activity records resolve supply-product and
+  component labels where those records exist; the UI no longer inserts the
+  generic "Activity recorded" line. Historical activity documents were not
+  rewritten.
 
 Validation:
 
@@ -47,6 +62,7 @@ Validation:
 - The Impeccable `harden` command is not available in the installed launcher;
   its available `detect` command scanned the component source but reported that
   page-level checks require a running server. No browser capture was available.
+- Follow-up validation: `yarn --cwd frontend workspace shooter-workshop.client test src/routes/Components/action.test.ts src/routes/shared.test.tsx` passed (9 tests); `yarn --cwd frontend workspace shooter-workshop.client build` passed; the BackOffice.Tests project build passed and the focused activity/inventory filter passed (3 tests). The domain build also passed. .NET validation reported existing ImageSharp vulnerability advisories and package-pruning warnings.
 
 ## Outcome
 

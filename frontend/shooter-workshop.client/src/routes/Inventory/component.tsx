@@ -15,7 +15,9 @@ import type { InventoryLoaderData, InventoryRouteData } from "./loader";
 type MutationState = "idle" | "busy" | "uncertain";
 type InventoryDialog =
   | { kind: "component-price"; component: WorkshopPhysicalComponent }
-  | { kind: "edit-product"; product: WorkshopInventory["products"][number] };
+  | { kind: "edit-product"; product: WorkshopInventory["products"][number] }
+  | { kind: "adjust-stock"; lot: WorkshopInventory["lots"][number]; productType: WorkshopInventory["products"][number]["type"] }
+  | { kind: "lot-status"; lot: WorkshopInventory["lots"][number] };
 
 function currencyAmount(amount: number, currency: string, culture: string) {
   return `${new Intl.NumberFormat(culture, {
@@ -185,7 +187,11 @@ function InventoryContent({
     if (!dialog) return;
     const mutationId = dialog.kind === "component-price"
       ? `component:${dialog.component.id}`
-      : `product:${dialog.product.id}`;
+      : dialog.kind === "edit-product"
+        ? `product:${dialog.product.id}`
+        : dialog.kind === "adjust-stock"
+          ? `adjust:${dialog.lot.id}`
+          : `status:${dialog.lot.id}`;
     if (mutationStates[mutationId] && mutationStates[mutationId] !== "idle") return;
     setDialog(null);
   };
@@ -284,36 +290,38 @@ function InventoryContent({
                 <tr key={product.id}>
                   <td>{t(product.type)}</td><td>{product.brand || "—"}</td><td>{product.name}</td>
                   <td>{t(product.archived ? "Archived" : "Active")}</td>
-                  <td className="record-actions">
-                    {inventory.supportsProductManagement && (
-                      <>
-                        <button className="button button-quiet" type="button" onClick={() => setDialog({ kind: "edit-product", product })}>
-                          {t("Edit")}
-                        </button>
-                        <InventoryMutationForm
-                          intent="archive-product"
-                          mutationId={`archive-product:${product.id}`}
-                          label={product.archived ? "Restore product" : "Archive product"}
-                          blocked={mutationBlocked}
-                          reportState={reportState}
-                        >
-                          <input type="hidden" name="productId" value={product.id} />
-                          <input type="hidden" name="expectedRevision" value={product.revision} />
-                          <input type="hidden" name="archived" value={String(!product.archived)} />
-                        </InventoryMutationForm>
-                        <InventoryMutationForm
-                          intent="delete-product"
-                          mutationId={`delete-product:${product.id}`}
-                          label="Delete"
-                          confirmMessage="Permanently delete this product? Products with purchase or recipe history cannot be deleted."
-                          blocked={mutationBlocked}
-                          reportState={reportState}
-                        >
-                          <input type="hidden" name="productId" value={product.id} />
-                          <input type="hidden" name="expectedRevision" value={product.revision} />
-                        </InventoryMutationForm>
-                      </>
-                    )}
+                  <td>
+                    <div className="inventory-product-actions">
+                      {inventory.supportsProductManagement && (
+                        <>
+                          <button className="button button-quiet" type="button" onClick={() => setDialog({ kind: "edit-product", product })}>
+                            {t("Edit")}
+                          </button>
+                          <InventoryMutationForm
+                            intent="archive-product"
+                            mutationId={`archive-product:${product.id}`}
+                            label={product.archived ? "Restore product" : "Archive product"}
+                            blocked={mutationBlocked}
+                            reportState={reportState}
+                          >
+                            <input type="hidden" name="productId" value={product.id} />
+                            <input type="hidden" name="expectedRevision" value={product.revision} />
+                            <input type="hidden" name="archived" value={String(!product.archived)} />
+                          </InventoryMutationForm>
+                          <InventoryMutationForm
+                            intent="delete-product"
+                            mutationId={`delete-product:${product.id}`}
+                            label="Delete"
+                            confirmMessage="Permanently delete this product? Products with purchase or recipe history cannot be deleted."
+                            blocked={mutationBlocked}
+                            reportState={reportState}
+                          >
+                            <input type="hidden" name="productId" value={product.id} />
+                            <input type="hidden" name="expectedRevision" value={product.revision} />
+                          </InventoryMutationForm>
+                        </>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}</tbody>
@@ -343,6 +351,61 @@ function InventoryContent({
               <p>{t("Type")}: {t(dialog.product.type)}</p>
               <label>{t("Brand")}<input name="brand" maxLength={120} defaultValue={dialog.product.brand ?? ""} /></label>
               <label>{t("Product name or number")}<input name="name" required maxLength={160} defaultValue={dialog.product.name} /></label>
+            </InventoryMutationForm>
+          </Dialog>
+        )}
+        {dialog?.kind === "adjust-stock" && (
+          <Dialog
+            open
+            title={t("Correct physical count")}
+            closeLabel={t("Close")}
+            onClose={closeDialog}
+          >
+            <InventoryMutationForm
+              intent="adjust-stock"
+              mutationId={`adjust:${dialog.lot.id}`}
+              label="Correct physical count"
+              blocked={mutationBlocked}
+              reportState={reportState}
+              onSuccess={() => setDialog(null)}
+            >
+              <input type="hidden" name="lotId" value={dialog.lot.id} />
+              <input type="hidden" name="expectedRevision" value={dialog.lot.revision} />
+              <label>
+                {t("Physical count")}
+                <input
+                  name="physicalCount"
+                  type="number"
+                  min="0"
+                  step="1"
+                  required
+                  defaultValue={dialog.productType === "Case" && dialog.lot.itemCount != null
+                    ? dialog.lot.itemCount
+                    : dialog.lot.availableQuantity}
+                />
+              </label>
+              <label>{t("Reason")}<input name="reason" required maxLength={500} /></label>
+            </InventoryMutationForm>
+          </Dialog>
+        )}
+        {dialog?.kind === "lot-status" && (
+          <Dialog
+            open
+            title={t(dialog.lot.isEmpty ? "Reopen package" : "Mark package empty")}
+            closeLabel={t("Close")}
+            onClose={closeDialog}
+          >
+            <InventoryMutationForm
+              intent="set-lot-status"
+              mutationId={`status:${dialog.lot.id}`}
+              label={dialog.lot.isEmpty ? "Reopen package" : "Mark package empty"}
+              blocked={mutationBlocked}
+              reportState={reportState}
+              onSuccess={() => setDialog(null)}
+            >
+              <input type="hidden" name="lotId" value={dialog.lot.id} />
+              <input type="hidden" name="expectedRevision" value={dialog.lot.revision} />
+              <input type="hidden" name="isEmpty" value={String(!dialog.lot.isEmpty)} />
             </InventoryMutationForm>
           </Dialog>
         )}
@@ -389,35 +452,25 @@ function InventoryContent({
                     </td>
                     <td>{currencyAmount(lot.totalPrice, lot.currency, culture)}</td>
                     <td className="inventory-lot-controls">
-                      {canCount && (
-                        <InventoryMutationForm
-                          intent="adjust-stock"
-                          mutationId={`adjust:${lot.id}`}
-                          label="Correct physical count"
-                          blocked={mutationBlocked}
-                          reportState={reportState}
+                      {canCount && product && (
+                        <button
+                          className="button button-quiet"
+                          type="button"
+                          disabled={mutationBlocked}
+                          onClick={() => setDialog({ kind: "adjust-stock", lot, productType: product.type })}
                         >
-                          <input type="hidden" name="lotId" value={lot.id} />
-                          <input type="hidden" name="expectedRevision" value={lot.revision} />
-                          <label>
-                            {t("Physical count")}
-                            <input name="physicalCount" type="number" min="0" step="1" required defaultValue={product?.type === "Case" && lot.itemCount != null ? lot.itemCount : lot.availableQuantity} />
-                          </label>
-                          <label>{t("Reason")}<input name="reason" required maxLength={500} /></label>
-                        </InventoryMutationForm>
+                          {t("Correct physical count")}
+                        </button>
                       )}
                       {packageStatus && (
-                        <InventoryMutationForm
-                          intent="set-lot-status"
-                          mutationId={`status:${lot.id}`}
-                          label={lot.isEmpty ? "Reopen package" : "Mark package empty"}
-                          blocked={mutationBlocked}
-                          reportState={reportState}
+                        <button
+                          className="button button-quiet"
+                          type="button"
+                          disabled={mutationBlocked}
+                          onClick={() => setDialog({ kind: "lot-status", lot })}
                         >
-                          <input type="hidden" name="lotId" value={lot.id} />
-                          <input type="hidden" name="expectedRevision" value={lot.revision} />
-                          <input type="hidden" name="isEmpty" value={String(!lot.isEmpty)} />
-                        </InventoryMutationForm>
+                          {t(lot.isEmpty ? "Reopen package" : "Mark package empty")}
+                        </button>
                       )}
                     </td>
                   </tr>
@@ -466,6 +519,8 @@ function InventoryContent({
                         </ul>
                       </details>
                     )}
+                  </div>
+                  <div className="inventory-component-actions">
                     <button
                       className="button button-quiet"
                       type="button"

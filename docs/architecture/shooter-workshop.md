@@ -42,8 +42,10 @@ entry point for offline navigation, and bypasses API requests. It never caches
 authenticated API responses. Native IndexedDB stores explicitly prepared,
 account-partitioned snapshots and a local command outbox. The supported offline
 operations are shooting sessions, maintenance events, catalogue create/archive,
-physical component creation, and component replacement; catalogue update/delete
-and unrelated routes remain online-only.
+single physical-component creation, and component replacement. Batch component
+creation and purchase-price recording require an online connection because each
+component and its purchase record must be confirmed independently; catalogue
+update/delete and unrelated routes also remain online-only.
 
 Route-level lazy loading is backed by a build-generated same-origin JS/CSS asset
 manifest. The service worker stages a build-specific cache and activates it only
@@ -108,7 +110,9 @@ automatic loader revalidation remain the freshness owner after successful mutati
 The finance and supplies inventory is an online-only, account-owned Workshop
 feature. It records individual product purchases and lots for primers, bullets,
 powder, cases and commercial ammunition, plus purchase-price information for
-physical components. Existing records and offline-created components without
+physical components. A price entered during batch component creation is a
+per-component amount and is recorded separately for each physical instance.
+Existing records and offline-created components without
 purchase information have an unknown historical price and contribute nothing to
 recorded spending until entered; this zero baseline is not a claim about historical
 spend.

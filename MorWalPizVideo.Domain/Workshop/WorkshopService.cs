@@ -1295,7 +1295,8 @@ public sealed partial class WorkshopService(
         string payloadIdentity, CancellationToken ct, string? originalOperationId = null,
         string? clientRequestHash = null, IReadOnlyList<WorkshopInventoryFact>? inventoryFacts = null,
         RecipeSnapshot? productionSnapshot = null,
-        WorkshopProductionCorrectionFact? productionCorrection = null)
+        WorkshopProductionCorrectionFact? productionCorrection = null,
+        string? activityEntityLabel = null)
     {
         RequireText(key, "Idempotency key", 80);
         var hash = PayloadHash(type, deltas, sourceIds, payloadIdentity, originalOperationId);
@@ -1307,6 +1308,8 @@ public sealed partial class WorkshopService(
                 throw new WorkshopConflictException("Idempotency key was already used for a different operation.");
             if (existing.PayloadHash != hash) throw new WorkshopConflictException("Idempotency key was already used for a different operation.");
             await ApplyProjectionAsync(accountId, existing.Deltas, ct);
+            if (activityEntityLabel is not null)
+                await RefreshActivityEntityLabelAsync(accountId, existing.Id, activityEntityLabel, ct);
             return new(existing, true);
         }
         var operation = new WorkshopOperation
@@ -1330,8 +1333,21 @@ public sealed partial class WorkshopService(
             return new(existing, true);
         }
         await ApplyProjectionAsync(accountId, deltas, ct);
-        await RecordActivityAsync(accountId, type, operation.Id, await ActivityLabelAsync(accountId, type, operation.SourceEntityIds, ct), ct, operation);
+        var entityLabel = activityEntityLabel
+            ?? await ActivityLabelAsync(accountId, type, operation.SourceEntityIds, ct);
+        await RecordActivityAsync(accountId, type, operation.Id, entityLabel, ct, operation);
         return new(operation, false);
+    }
+
+    private async Task RefreshActivityEntityLabelAsync(
+        string accountId, string operationId, string entityLabel, CancellationToken ct)
+    {
+        var activities = await repository.ListAsync<WorkshopActivity>(
+            DbCollections.WorkshopActivities, accountId, ct);
+        var activity = activities.FirstOrDefault(x => x.OperationId == operationId);
+        if (activity is null || activity.EntityLabel == entityLabel) return;
+        await repository.ReplaceAsync(DbCollections.WorkshopActivities,
+            activity with { EntityLabel = entityLabel }, accountId, cancellationToken: ct);
     }
 
     private async Task ApplyProjectionAsync(string accountId, IReadOnlyList<WorkshopDelta> deltas, CancellationToken ct)
@@ -1429,7 +1445,26 @@ public sealed partial class WorkshopService(
             case WorkshopOperationType.ComponentDeleted:
             case WorkshopOperationType.ComponentInstalled:
             case WorkshopOperationType.ComponentRemoved:
+            case WorkshopOperationType.ComponentPurchaseRecorded:
+            case WorkshopOperationType.ComponentPurchaseCorrected:
                 return await ComponentLabelAsync(accountId, ids, ct);
+            case WorkshopOperationType.SupplyProductCreated:
+            case WorkshopOperationType.SupplyProductUpdated:
+            case WorkshopOperationType.SupplyProductArchived:
+            case WorkshopOperationType.SupplyProductDeleted:
+                return await SupplyProductLabelAsync(accountId, ids, ct);
+            case WorkshopOperationType.SupplyPurchaseRecorded:
+                var purchasedProductId = ids.LastOrDefault();
+                return purchasedProductId is null
+                    ? null
+                    : await SupplyProductLabelAsync(accountId, [purchasedProductId], ct);
+            case WorkshopOperationType.SupplyStockAdjusted:
+            case WorkshopOperationType.SupplyLotStatusChanged:
+                var lot = await repository.GetAsync<WorkshopSupplyLot>(
+                    DbCollections.WorkshopSupplyLots, accountId, ids.FirstOrDefault() ?? string.Empty, ct);
+                return lot is null
+                    ? await SupplyProductLabelAsync(accountId, ids, ct)
+                    : await SupplyProductLabelAsync(accountId, [lot.ProductId], ct);
             case WorkshopOperationType.MaintenanceRecorded:
                 return await FirearmLabelAsync(accountId, ids.FirstOrDefault(), ct)
                     ?? await ComponentLabelAsync(accountId, ids, ct);
@@ -1446,6 +1481,14 @@ public sealed partial class WorkshopService(
                 var batch = await repository.GetAsync<AmmoBatch>(
                     DbCollections.WorkshopAmmoBatches, accountId, ids.FirstOrDefault() ?? string.Empty, ct);
                 return batch?.RecipeSnapshot.Name;
+            case WorkshopOperationType.ProductionEdited:
+                foreach (var id in ids)
+                {
+                    var session = await repository.GetAsync<ProductionSession>(
+                        DbCollections.WorkshopProductionSessions, accountId, id, ct);
+                    if (session is not null) return session.RecipeSnapshot.Name;
+                }
+                return null;
             case WorkshopOperationType.AllocationReleased:
             case WorkshopOperationType.AllocationReallocated:
                 var allocation = await repository.GetAsync<AmmoAllocation>(
@@ -1478,6 +1521,24 @@ public sealed partial class WorkshopService(
         }
         return null;
     }
+
+    private async Task<string?> SupplyProductLabelAsync(
+        string accountId, IReadOnlyList<string> ids, CancellationToken ct)
+    {
+        foreach (var id in ids)
+        {
+            var product = await repository.GetAsync<WorkshopSupplyProduct>(
+                DbCollections.WorkshopSupplyProducts, accountId, id, ct);
+            if (product is null) continue;
+            var name = string.Join(" ", new[] { product.Brand, product.Name }
+                .Where(value => !string.IsNullOrWhiteSpace(value)));
+            return SupplyProductLabel(product.Type, name);
+        }
+        return null;
+    }
+
+    private static string SupplyProductLabel(WorkshopSupplyType type, string? name) =>
+        string.IsNullOrWhiteSpace(name) ? type.ToString() : name;
 
     private async Task<string?> RecipeLabelAsync(string accountId, string? id, CancellationToken ct)
     {
@@ -1616,6 +1677,16 @@ public sealed partial class WorkshopService(
         WorkshopOperationType.ComponentRemoved => "Component removed",
         WorkshopOperationType.ShootingRecorded => "Shooting session recorded",
         WorkshopOperationType.MaintenanceRecorded => "Maintenance recorded",
+        WorkshopOperationType.SupplyProductCreated => "Supply product added",
+        WorkshopOperationType.SupplyPurchaseRecorded => "Supply purchase recorded",
+        WorkshopOperationType.SupplyStockAdjusted => "Supply stock corrected",
+        WorkshopOperationType.SupplyLotStatusChanged => "Package status changed",
+        WorkshopOperationType.ComponentPurchaseRecorded => "Component purchase recorded",
+        WorkshopOperationType.ComponentPurchaseCorrected => "Component purchase corrected",
+        WorkshopOperationType.ProductionEdited => "Production record corrected",
+        WorkshopOperationType.SupplyProductUpdated => "Supply product updated",
+        WorkshopOperationType.SupplyProductArchived => "Supply product archived",
+        WorkshopOperationType.SupplyProductDeleted => "Supply product deleted",
         _ => type.ToString()
     };
     private static void RequireAccount(string value) { if (string.IsNullOrWhiteSpace(value)) throw new WorkshopValidationException("Account is required."); }

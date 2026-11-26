@@ -192,6 +192,9 @@ public sealed partial class WorkshopService
             productId, brand = normalizedBrand, name = normalizedName, expectedRevision
         });
         var sources = new[] { productId };
+        var updatedLabel = SupplyProductLabel(product.Type,
+            string.Join(" ", new[] { normalizedBrand, normalizedName }
+                .Where(value => !string.IsNullOrWhiteSpace(value))));
         var existing = await repository.FindOperationAsync(accountId, idempotencyKey, ct);
         if (existing is not null)
         {
@@ -200,7 +203,8 @@ public sealed partial class WorkshopService
                     existing.Deltas, existing.SourceEntityIds, payload, null))
                 throw new WorkshopConflictException("Idempotency key was already used for a different operation.");
             await CommitAsync(accountId, idempotencyKey, WorkshopOperationType.SupplyProductUpdated,
-                existing.EffectiveAt, existing.Deltas, existing.SourceEntityIds, payload, ct);
+                existing.EffectiveAt, existing.Deltas, existing.SourceEntityIds, payload, ct,
+                activityEntityLabel: updatedLabel);
             product = await repository.GetAsync<WorkshopSupplyProduct>(
                 DbCollections.WorkshopSupplyProducts, accountId, productId, ct)
                 ?? throw new WorkshopConflictException("Supply product could not be recovered.");
@@ -220,7 +224,7 @@ public sealed partial class WorkshopService
         };
         if (existing is null)
             await CommitAsync(accountId, idempotencyKey, WorkshopOperationType.SupplyProductUpdated,
-                Now(), [], sources, payload, ct);
+                Now(), [], sources, payload, ct, activityEntityLabel: updatedLabel);
         if (!await repository.ReplaceAsync(DbCollections.WorkshopSupplyProducts,
                 updated, accountId, product.Revision, ct))
             throw new WorkshopConflictException("Supply product changed while updating it.");

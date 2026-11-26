@@ -295,10 +295,18 @@ table { width: 100%; border-collapse: collapse; min-width: 600px; } th, td { pad
 .inventory-component-row { display: grid; grid-template-columns: minmax(13rem, .8fr) minmax(0, 1.2fr); align-items: start; gap: 1.25rem; padding: 1rem 0; border-top: 1px solid var(--workshop-border); }
 .inventory-component-row h3 { margin: 0; overflow-wrap: anywhere; }
 .inventory-component-row p, .inventory-policy-note p { color: var(--workshop-secondary); }
+.inventory-component-actions { display: flex; justify-content: flex-end; align-items: flex-start; }
 .inventory-mutation-form > .button-primary { display: flex; margin: 1rem 0 0 auto; }
 .inventory-mutation-form .form-grid { gap: .75rem; }
-.inventory-lot-controls { min-width: 17rem; }
-.inventory-lot-controls .inventory-mutation-form + .inventory-mutation-form { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--workshop-border); }
+.inventory-product-actions { display: flex; min-width: 17rem; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: .45rem; }
+.inventory-product-actions > form { display: contents; }
+.inventory-product-actions .inventory-mutation-form > .button-primary { margin: 0; }
+.inventory-product-actions .form-success, .inventory-product-actions .form-error { flex: 1 0 100%; margin: 0; text-align: end; }
+.inventory-lot-controls { display: flex; min-width: 17rem; flex-wrap: wrap; align-items: center; gap: .5rem; }
+.component-purchase-fields { margin: 0; padding: .8rem 0 0; border: 0; border-top: 1px solid var(--workshop-border); }
+.component-purchase-fields legend { float: none; width: auto; margin: 0; padding: .6rem 0 0; color: var(--workshop-accent); font-weight: 700; }
+.component-purchase-fields p { margin: 0 0 .65rem; color: var(--workshop-secondary); font-size: .85rem; }
+.component-purchase-fields > small { display: block; margin-top: .5rem; color: var(--workshop-secondary); }
 .inventory-uncertain { padding: .75rem; border: 1px solid var(--workshop-warning); border-radius: var(--workshop-radius); background: var(--workshop-elevated); color: var(--workshop-text); }
 .inventory-uncertain p { color: var(--workshop-secondary); overflow-wrap: anywhere; }
 .inventory-uncertain .button { margin-top: .5rem; }
@@ -318,6 +326,7 @@ table { width: 100%; border-collapse: collapse; min-width: 600px; } th, td { pad
 }
 @media (max-width: 560px) {
   .inventory-lot-controls { min-width: 14rem; }
+  .inventory-product-actions { min-width: 0; }
   .inventory-currency-list li { align-items: flex-start; flex-direction: column; gap: .25rem; }
   .dashboard-inventory-units { flex-direction: column; gap: .6rem; }
 }

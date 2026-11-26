@@ -130,6 +130,16 @@ const operationTitles: Record<string, string> = {
   ShootingCorrected: "Shooting session corrected",
   StockAdjusted: "Stock adjusted",
   ComponentSwapped: "Component swapped",
+  SupplyProductCreated: "Supply product added",
+  SupplyPurchaseRecorded: "Supply purchase recorded",
+  SupplyStockAdjusted: "Supply stock corrected",
+  SupplyLotStatusChanged: "Package status changed",
+  ComponentPurchaseRecorded: "Component purchase recorded",
+  ComponentPurchaseCorrected: "Component purchase corrected",
+  ProductionEdited: "Production record corrected",
+  SupplyProductUpdated: "Supply product updated",
+  SupplyProductArchived: "Supply product archived",
+  SupplyProductDeleted: "Supply product deleted",
 };
 
 const numericOperationTypes = [
@@ -159,6 +169,16 @@ const numericOperationTypes = [
   "ShootingCorrected",
   "StockAdjusted",
   "ComponentSwapped",
+  "SupplyProductCreated",
+  "SupplyPurchaseRecorded",
+  "SupplyStockAdjusted",
+  "SupplyLotStatusChanged",
+  "ComponentPurchaseRecorded",
+  "ComponentPurchaseCorrected",
+  "ProductionEdited",
+  "SupplyProductUpdated",
+  "SupplyProductArchived",
+  "SupplyProductDeleted",
 ] as const;
 
 function operationTypeName(type: unknown): string | null {
@@ -186,7 +206,7 @@ export function ActivityList({ items, compact = false }: { items: WorkshopActivi
           <span className="activity-dot" />
           <div>
             <strong>{getActivityTitle(item.type)}</strong>
-            {item.entityLabel ? <p>{item.entityLabel}</p> : !compact ? <p>{t("Activity recorded")}</p> : null}
+            {item.entityLabel && <p>{item.entityLabel}</p>}
             {!compact ? (
               <>
                 <small>

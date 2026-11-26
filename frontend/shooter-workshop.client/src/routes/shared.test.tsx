@@ -13,6 +13,9 @@ describe("workshop activity presentation", () => {
     expect(getActivityTitle("ShootingRecorded")).toBe("Shooting session recorded");
     expect(getActivityTitle(22)).toBe("Shooting session recorded");
     expect(getActivityTitle(11)).toBe("Component installed");
+    expect(getActivityTitle(27)).toBe("Supply purchase recorded");
+    expect(getActivityTitle("ComponentPurchaseRecorded")).toBe("Component purchase recorded");
+    expect(getActivityTitle(35)).toBe("Supply product deleted");
   });
 
   it("uses safe fallbacks and keeps the operation ID secondary", () => {
@@ -43,7 +46,7 @@ describe("workshop activity presentation", () => {
 
     expect(screen.getByText("Workshop activity")).toBeTruthy();
     expect(screen.getByText("Firearm registered")).toBeTruthy();
-    expect(screen.getAllByText("Activity recorded")).toHaveLength(2);
+    expect(screen.queryByText("Activity recorded")).toBeNull();
     expect(screen.getByText("Operation not set")).toBeTruthy();
     expect(screen.getByText("Operation operation-2")).toBeTruthy();
     expect(screen.queryByText("999")).toBeNull();
