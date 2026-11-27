@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { useLocation, useNavigate } from "react-router";
+import { Link, useLocation, useNavigate } from "react-router";
 import { AccountForm, AppearanceSelector } from "@morwalpiz/layout";
 import { getApiFieldErrors, getPublicAccountErrorMessage } from "@morwalpizvideo/services";
 import { useWorkshopAuth } from "../../auth/AuthProvider";
@@ -18,7 +18,7 @@ export function getSafeReturnPath(value: string | null): string {
 
   try {
     const url = new URL(value, "https://workshop.local");
-    if (url.pathname === "/account/login" || url.pathname === "/account/register") {
+    if (url.pathname.startsWith("/account/") && url.pathname !== "/account/profile") {
       return "/";
     }
     return `${url.pathname}${url.search}${url.hash}`;
@@ -85,7 +85,12 @@ export default function AccountLogin() {
     setPending(true);
     let authenticated = false;
     try {
-      authenticated = await login({ identifier, password, rememberMe });
+      const result = await login({ identifier, password, rememberMe, site: "workshop" });
+      authenticated = result.authenticated;
+      if (result.emailConfirmationRequired && !authenticated) {
+        await navigate("/account/check-email", { state: { email: identifier.includes("@") ? identifier : "" } });
+        return;
+      }
       if (authenticated) {
         await navigate(returnPath, { replace: true });
       } else {
@@ -199,6 +204,7 @@ export default function AccountLogin() {
         />
         {t("Remember me for 30 days")}
       </label>
+      <p><Link to="/account/forgot-password">{t("Forgot your password?")}</Link></p>
     </AccountForm>
   );
 }

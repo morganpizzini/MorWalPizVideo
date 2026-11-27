@@ -80,6 +80,7 @@ public sealed class PublicAccountEndpointTests : IClassFixture<ServerApiWebAppli
         using var client = factory.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = true });
         var request = new PublicAccountRegistrationRequest
         {
+            Site = "workshop",
             Username = $"user{Guid.NewGuid():N}"[..12],
             Email = $"{Guid.NewGuid():N}@example.test",
             Password = "A-strong-password-123",
@@ -98,6 +99,10 @@ public sealed class PublicAccountEndpointTests : IClassFixture<ServerApiWebAppli
         };
         registration.Headers.Add("X-CSRF-TOKEN", csrf!.Token);
         var registered = await client.SendAsync(registration);
+        var pending = await registered.Content.ReadFromJsonAsync<PublicAccountSessionContract>();
+        Assert.False(pending!.Authenticated);
+        Assert.True(pending.EmailConfirmationRequired);
+        await PublicAccountTestFlow.ConfirmAndLoginAsync(factory, client, request, csrf);
         var sessionResponse = await client.GetAsync("/api/v1/account/session");
         var session = await sessionResponse.Content.ReadFromJsonAsync<PublicAccountSessionContract>();
         var publicPage = await client.GetAsync("/api/navigation");
@@ -142,6 +147,7 @@ public sealed class PublicAccountEndpointTests : IClassFixture<ServerApiWebAppli
         using var client = factory.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = true });
         var request = new PublicAccountRegistrationRequest
         {
+            Site = "workshop",
             Username = $"user{Guid.NewGuid():N}"[..12],
             Email = $"{Guid.NewGuid():N}@example.test",
             Password = "A-strong-password-123",
@@ -156,6 +162,7 @@ public sealed class PublicAccountEndpointTests : IClassFixture<ServerApiWebAppli
         };
         registration.Headers.Add("X-CSRF-TOKEN", csrf!.Token);
         await client.SendAsync(registration);
+        await PublicAccountTestFlow.ConfirmAndLoginAsync(factory, client, request, csrf);
 
         using var logout = new HttpRequestMessage(HttpMethod.Delete, "/api/v1/account/sessions/current");
         logout.Headers.Add("X-CSRF-TOKEN", csrf.Token);
@@ -181,11 +188,12 @@ public sealed class PublicAccountEndpointTests : IClassFixture<ServerApiWebAppli
     }
 
     [Fact]
-    public async Task Registration_issues_a_cookie_safe_session_token_that_restores_immediately()
+    public async Task Confirmed_login_issues_a_cookie_safe_session_token_that_restores_immediately()
     {
         using var client = factory.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = true });
         var request = new PublicAccountRegistrationRequest
         {
+            Site = "workshop",
             Username = $"user{Guid.NewGuid():N}"[..12],
             Email = $"{Guid.NewGuid():N}@example.test",
             Password = "A-strong-password-123",
@@ -200,7 +208,8 @@ public sealed class PublicAccountEndpointTests : IClassFixture<ServerApiWebAppli
         };
         registration.Headers.Add("X-CSRF-TOKEN", csrf!.Token);
 
-        var registered = await client.SendAsync(registration);
+        await client.SendAsync(registration);
+        var registered = await PublicAccountTestFlow.ConfirmAndLoginAsync(factory, client, request, csrf);
         var sessionCookie = registered.Headers.GetValues("Set-Cookie")
             .Single(cookie => cookie.StartsWith("public_account_session=", StringComparison.Ordinal));
         var sessionCookieValue = sessionCookie.Split(';', 2)[0]
@@ -219,6 +228,7 @@ public sealed class PublicAccountEndpointTests : IClassFixture<ServerApiWebAppli
         using var client = factory.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = true });
         var request = new PublicAccountRegistrationRequest
         {
+            Site = "workshop",
             Username = $"user{Guid.NewGuid():N}"[..12],
             Email = $"{Guid.NewGuid():N}@example.test",
             Password = "A-strong-password-123",
@@ -233,7 +243,8 @@ public sealed class PublicAccountEndpointTests : IClassFixture<ServerApiWebAppli
         };
         registration.Headers.Add("X-CSRF-TOKEN", csrf!.Token);
         var registered = await client.SendAsync(registration);
-        var session = await registered.Content.ReadFromJsonAsync<PublicAccountSessionContract>();
+        var loginResponse = await PublicAccountTestFlow.ConfirmAndLoginAsync(factory, client, request, csrf);
+        var session = await loginResponse.Content.ReadFromJsonAsync<PublicAccountSessionContract>();
 
         using var withoutCsrf = new HttpRequestMessage(HttpMethod.Post, "/api/v1/workshop/capability-guide/seen")
         {
@@ -328,26 +339,29 @@ public sealed class PublicAccountEndpointTests : IClassFixture<ServerApiWebAppli
         }
     }
 
-    private static async Task<(PublicAccountCsrfContract Csrf, string AccountId)> RegisterAccountAsync(
+    private async Task<(PublicAccountCsrfContract Csrf, string AccountId)> RegisterAccountAsync(
         HttpClient client)
     {
         var csrf = await client.GetFromJsonAsync<PublicAccountCsrfContract>("/api/v1/account/csrf");
+        var accountRequest = new PublicAccountRegistrationRequest
+        {
+            Site = "workshop",
+            Username = $"user{Guid.NewGuid():N}"[..12],
+            Email = $"{Guid.NewGuid():N}@example.test",
+            Password = "A-strong-password-123",
+            DisplayName = "Workshop User",
+            TermsAccepted = true,
+            PrivacyNoticeAcknowledged = true
+        };
         using var registration = new HttpRequestMessage(HttpMethod.Post, "/api/v1/accounts")
         {
-            Content = JsonContent.Create(new PublicAccountRegistrationRequest
-            {
-                Username = $"user{Guid.NewGuid():N}"[..12],
-                Email = $"{Guid.NewGuid():N}@example.test",
-                Password = "A-strong-password-123",
-                DisplayName = "Workshop User",
-                TermsAccepted = true,
-                PrivacyNoticeAcknowledged = true
-            })
+            Content = JsonContent.Create(accountRequest)
         };
         registration.Headers.Add("X-CSRF-TOKEN", csrf!.Token);
         var response = await client.SendAsync(registration);
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var session = await response.Content.ReadFromJsonAsync<PublicAccountSessionContract>();
+        var confirmed = await PublicAccountTestFlow.ConfirmAndLoginAsync(factory, client, accountRequest, csrf);
+        var session = await confirmed.Content.ReadFromJsonAsync<PublicAccountSessionContract>();
         return (csrf, session!.Account!.Id);
     }
 
@@ -361,6 +375,7 @@ public sealed class PublicAccountEndpointTests : IClassFixture<ServerApiWebAppli
         var csrf = await client.GetFromJsonAsync<PublicAccountCsrfContract>("/api/v1/account/csrf");
         var request = new PublicAccountRegistrationRequest
         {
+            Site = "workshop",
             Username = $"user{Guid.NewGuid():N}"[..12],
             Email = $"{Guid.NewGuid():N}@example.test",
             Password = "A-strong-password-123",
@@ -374,6 +389,7 @@ public sealed class PublicAccountEndpointTests : IClassFixture<ServerApiWebAppli
         };
         registration.Headers.Add("X-CSRF-TOKEN", csrf!.Token);
         await client.SendAsync(registration);
+        await PublicAccountTestFlow.ConfirmAndLoginAsync(factory, client, request, csrf);
 
         var profile = await client.GetAsync("/api/v1/profile");
         using var update = new HttpRequestMessage(HttpMethod.Put, "/api/v1/profile")

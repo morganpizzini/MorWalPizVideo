@@ -4,6 +4,9 @@ namespace MorWalPiz.Contracts.Contracts;
 
 public sealed record PublicAccountRegistrationRequest
 {
+    [RegularExpression("^(workshop|public-site)$")]
+    public string Site { get; init; } = string.Empty;
+
     [Required, StringLength(40, MinimumLength = 3)]
     public string Username { get; init; } = string.Empty;
 
@@ -25,6 +28,9 @@ public sealed record PublicAccountRegistrationRequest
 
 public sealed record PublicAccountLoginRequest
 {
+    [RegularExpression("^(workshop|public-site)$")]
+    public string? Site { get; init; }
+
     [Required, StringLength(256)]
     public string Identifier { get; init; } = string.Empty;
 
@@ -56,6 +62,8 @@ public sealed record WorkshopCapabilityGuideSeenResponse
 
 public sealed record PublicAccountSummaryContract
 {
+    public bool EmailConfirmed { get; init; }
+    public bool EmailConfirmationRequired { get; init; }
     public string Id { get; init; } = string.Empty;
     public string Username { get; init; } = string.Empty;
     public string Email { get; init; } = string.Empty;
@@ -66,8 +74,36 @@ public sealed record PublicAccountSummaryContract
 public sealed record PublicAccountSessionContract
 {
     public bool Authenticated { get; init; }
+    public bool EmailConfirmationRequired { get; init; }
+    public string? ConfirmationEmailStatus { get; init; }
     public PublicAccountSummaryContract? Account { get; init; }
 }
+
+public sealed record PublicAccountMailRequest
+{
+    [Required, EmailAddress, StringLength(256)]
+    public string Email { get; init; } = string.Empty;
+
+    [Required, RegularExpression("^(workshop|public-site)$")]
+    public string Site { get; init; } = string.Empty;
+}
+
+public record PublicAccountTokenRequest
+{
+    [Required, RegularExpression("^[a-fA-F0-9]{24}$")]
+    public string AccountId { get; init; } = string.Empty;
+
+    [Required, RegularExpression("^[a-fA-F0-9]{64}$")]
+    public string Token { get; init; } = string.Empty;
+}
+
+public sealed record PublicAccountPasswordResetRequest : PublicAccountTokenRequest
+{
+    [Required, StringLength(128, MinimumLength = 8)]
+    public string Password { get; init; } = string.Empty;
+}
+
+public sealed record PublicAccountMailReceipt(bool Accepted);
 
 public sealed record PublicAccountCsrfContract
 {

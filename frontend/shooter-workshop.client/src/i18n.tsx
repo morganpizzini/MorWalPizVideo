@@ -1,10 +1,12 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { accountMailItalian } from "@morwalpiz/layout";
 
 export const supportedCultures = ["it-IT", "en-GB"] as const;
 export type SupportedCulture = (typeof supportedCultures)[number];
 
 const storageKey = "shooter-workshop.culture";
 const italian: Record<string, string> = {
+  ...accountMailItalian,
   "Workshop navigation": "Navigazione Workshop",
   "Dashboard": "Dashboard",
   "Firearms": "Armi",

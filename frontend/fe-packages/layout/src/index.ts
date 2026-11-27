@@ -27,6 +27,8 @@ export { CustomFormRenderer } from "./components/CustomFormRenderer.js";
 export { QuickLinksRenderer } from "./components/QuickLinksRenderer.js";
 export { QuickLinkKindIcon } from "./components/QuickLinkKindIcon.js";
 export { AccountForm } from "./components/AccountForm.js";
+export { AccountMailPage, AccountEmailNotice, useAccountMailCooldown, accountMailItalian } from "./components/AccountMail.js";
+export type { AccountMailTranslate } from "./components/AccountMail.js";
 
 // Utils
 export {

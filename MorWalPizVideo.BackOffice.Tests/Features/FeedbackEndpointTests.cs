@@ -49,6 +49,7 @@ public sealed class FeedbackEndpointTests : IClassFixture<ServerApiWebApplicatio
         var csrf = await client.GetFromJsonAsync<PublicAccountCsrfContract>("/api/v1/account/csrf");
         var registration = new PublicAccountRegistrationRequest
         {
+            Site = "workshop",
             Username = $"feedback{Guid.NewGuid():N}"[..16],
             Email = $"{Guid.NewGuid():N}@example.test",
             Password = "A-strong-password-123",
@@ -62,6 +63,7 @@ public sealed class FeedbackEndpointTests : IClassFixture<ServerApiWebApplicatio
         };
         accountRequest.Headers.Add("X-CSRF-TOKEN", csrf!.Token);
         Assert.Equal(HttpStatusCode.OK, (await client.SendAsync(accountRequest)).StatusCode);
+        await PublicAccountTestFlow.ConfirmAndLoginAsync(factory, client, registration, csrf);
 
         var request = NewSubmission();
         using var firstRequest = FeedbackRequest(request, csrf.Token);

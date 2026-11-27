@@ -6,6 +6,7 @@ import { PublicNavigationProvider } from './navigation';
 import PushOptIn from '../../components/push-opt-in';
 import { PublicAccountProvider } from './account';
 import { PublicSocialsProvider } from './socials';
+import ConfirmationNotice from '../account/ConfirmationNotice';
 export default function Root() {
   const navigation = useNavigation();
   return (
@@ -21,6 +22,7 @@ export default function Root() {
             className={`site-content ${navigation.state === 'loading' ? 'loading' : ''}`}
             aria-busy={navigation.state === 'loading'}
           >
+            <ConfirmationNotice />
             <Outlet />
           </div>
           <Footer />

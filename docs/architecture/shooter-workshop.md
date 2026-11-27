@@ -77,6 +77,14 @@ login creates an eight-hour server session and a browser session cookie; selecti
 “Remember me” creates a thirty-day server session and a persistent cookie. The
 session token is never exposed to frontend JavaScript or stored in browser storage.
 
+Registration now shows a check-email step and requires explicit confirmation
+before the first login. Existing unconfirmed accounts retain access and see a
+confirmation notice after online login. Shared recovery and confirmation pages
+return to the requesting site, require connectivity, and permit resend after a
+60-second client-only cooldown. Password reset invalidates server sessions, not
+prepared offline snapshots. See the [account-mail delivery record](../feature-handoffs/workshop-password-recovery-handoff.md)
+and [ADR-031](adr/ADR-031-public-account-mail-confirmation.md).
+
 The authenticated shell includes a four-step capability wizard. New account
 registrations initialize `WorkshopCapabilityGuideSeenVersion` to `0`; the wizard
 opens when that account first reaches Workshop and can be reopened from the

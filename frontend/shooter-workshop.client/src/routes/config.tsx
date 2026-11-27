@@ -6,6 +6,10 @@ import { DeferredRouteError } from "./shared";
 import { action as offlineAction } from "./offlineAction";
 
 export const routes: RouteObject[] = [
+  ...["/account/forgot-password", "/account/reset-password", "/account/check-email", "/account/confirm-email"].map((path) => ({
+    path,
+    lazy: async () => ({ Component: (await import("./AccountMail")).default }),
+  })),
   {
     path: "/account/login",
     lazy: async () => {

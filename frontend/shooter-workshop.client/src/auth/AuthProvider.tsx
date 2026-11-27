@@ -22,7 +22,7 @@ interface AuthContextValue {
   offline: boolean;
   error: string | null;
   refresh: () => Promise<boolean>;
-  login: (request: PublicAccountLoginRequest) => Promise<boolean>;
+  login: (request: PublicAccountLoginRequest) => Promise<PublicAccountSession>;
   logout: () => Promise<void>;
   updateSession: (session: PublicAccountSession) => void;
 }
@@ -119,6 +119,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       login: async (request) => {
         try {
           const next = await loginPublicAccount(request);
+          if (next.emailConfirmationRequired && !next.authenticated) return next;
           if (next.account) {
             try {
               await rememberOfflineAccount(next.account);
@@ -131,10 +132,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (!next.account) setError(null);
           setOffline(false);
           setLoading(false);
-          return next.authenticated;
+          return next;
         } catch (requestError) {
           setError(getPublicAccountErrorMessage(requestError));
-          return false;
+          throw requestError;
         }
       },
       logout: async () => {

@@ -7,7 +7,6 @@ import {
   registerPublicAccount,
 } from "@morwalpizvideo/services";
 import type { PublicAccountRegistrationRequest } from "@morwalpizvideo/models";
-import { useWorkshopAuth } from "../../auth/AuthProvider";
 import { LanguageSelector } from "../../components/LanguageSelector";
 import { useI18n } from "../../i18n";
 import { getSafeReturnPath } from "../AccountLogin/component";
@@ -37,11 +36,11 @@ export default function AccountRegister() {
   const { t } = useI18n();
   const navigate = useNavigate();
   const location = useLocation();
-  const { refresh } = useWorkshopAuth();
   const returnPath = getSafeReturnPath(
     new URLSearchParams(location.search).get("returnUrl"),
   );
   const [form, setForm] = useState<PublicAccountRegistrationRequest>({
+    site: "workshop",
     username: "",
     email: "",
     password: "",
@@ -65,15 +64,16 @@ export default function AccountRegister() {
 
     setPending(true);
     try {
-      await registerPublicAccount(form);
-      const sessionRestored = await refresh();
+      const result = await registerPublicAccount(form);
+      setForm((current) => ({ ...current, password: "" }));
+      setConfirmation("");
       void navigate(
-        `/account/login?returnUrl=${encodeURIComponent(returnPath)}`,
+        "/account/check-email",
         {
           replace: true,
           state: {
-            registrationSuccess: true,
-            sessionRestoreFailed: !sessionRestored,
+            email: form.email,
+            confirmationEmailStatus: result.confirmationEmailStatus,
           },
         },
       );

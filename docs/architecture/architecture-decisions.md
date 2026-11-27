@@ -31,6 +31,7 @@ Architecture Decision Records live in `docs/architecture/adr`. Accepted ADRs gov
 | [ADR-028](adr/ADR-028-startup-reader-indexes.md) | Startup bootstrap for active-reader indexes | Superseded by ADR-029 |
 | [ADR-029](adr/ADR-029-nonblocking-mongo-index-startup.md) | BackOffice attempts all shared-platform indexes at startup without blocking application availability | Accepted |
 | [ADR-030](adr/ADR-030-shooter-workshop-recipe-journal.md) | Keep descriptive recipe journal entries in a separate account-owned collection | Accepted |
+| [ADR-031](adr/ADR-031-public-account-mail-confirmation.md) | Shared public-account recovery and confirmation with site-specific links and configured SMTP | Accepted; deployed delivery unverified |
 
 ## ADR Process
 

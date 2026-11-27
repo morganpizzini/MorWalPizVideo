@@ -10,6 +10,7 @@ export interface AccountFormProps {
   message?: string;
   warning?: string;
   pending?: boolean;
+  submitDisabled?: boolean;
   header?: ReactNode;
   footer?: ReactNode;
   children: ReactNode;
@@ -25,6 +26,7 @@ export function AccountForm({
   message,
   warning,
   pending = false,
+  submitDisabled = false,
   header,
   footer,
   children,
@@ -52,7 +54,7 @@ export function AccountForm({
                 {warning}
               </div>
             )}
-            <button type="submit" className={`${submitClassName} mt-4`} disabled={pending}>
+            <button type="submit" className={`${submitClassName} mt-4`} disabled={pending || submitDisabled}>
               {pending ? pendingLabel : submitLabel}
             </button>
             {footer}

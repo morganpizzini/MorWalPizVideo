@@ -8,6 +8,8 @@ using Microsoft.AspNetCore.RateLimiting;
 using MorWalPiz.Contracts.Contracts;
 using MorWalPizVideo.Domain.Accounts;
 using MorWalPizVideo.MvcHelpers.Authentication;
+using MorWalPizVideo.Models.Models;
+using MorWalPizVideo.ServerAPI.Services;
 
 namespace MorWalPizVideo.ServerAPI.Controllers;
 
@@ -16,6 +18,7 @@ namespace MorWalPizVideo.ServerAPI.Controllers;
 [Route("api/v1")]
 public sealed class PublicAccountController(
     IPublicAccountService accountService,
+    AccountMailQueue mailQueue,
     IWebHostEnvironment environment) : ControllerBase
 {
     [HttpGet("account/csrf")]
@@ -48,10 +51,14 @@ public sealed class PublicAccountController(
     {
         if (!PublicAccountSecurity.HasValidCsrf(Request))
             return CsrfFailure();
+        if (request.Site is not ("workshop" or "public-site"))
+            return ValidationProblem(new ValidationProblemDetails(new Dictionary<string, string[]> { ["Site"] = ["Select a supported account site."] }));
+        if (!mailQueue.IsAvailable)
+            return StatusCode(503, new ProblemDetails { Title = "Account mail is unavailable. Please try again later." });
 
         try
         {
-            var result = await accountService.RegisterAsync(
+            var account = await accountService.RegisterPendingAsync(
                 new PublicAccountRegistrationCommand(
                     request.Username,
                     request.Email,
@@ -60,10 +67,14 @@ public sealed class PublicAccountController(
                     request.TermsAccepted,
                     request.PrivacyNoticeAcknowledged),
                 cancellationToken);
-            if (result is null)
+            if (account is null)
                 return ValidationProblem("The account details are not valid.");
-            SetSessionCookie(result.SessionToken, result.SessionExpiresAtUtc, persistent: false);
-            return Ok(ToSessionContract(result.Account));
+            var requested = mailQueue.TryEnqueue(new(account.Email, request.Site, PublicAccountMailPurpose.EmailConfirmation));
+            return Ok(new PublicAccountSessionContract
+            {
+                Authenticated = false, EmailConfirmationRequired = true,
+                ConfirmationEmailStatus = requested ? "requested" : "unavailable"
+            });
         }
         catch (PublicAccountConflictException)
         {
@@ -81,13 +92,22 @@ public sealed class PublicAccountController(
         if (!PublicAccountSecurity.HasValidCsrf(Request))
             return CsrfFailure();
 
-        var result = await accountService.LoginAsync(
+        var result = await accountService.LoginForPublicClientAsync(
             new PublicAccountLoginCommand(request.Identifier, request.Password, request.RememberMe),
             cancellationToken);
         if (result is null)
             return Unauthorized(new ProblemDetails { Title = "Invalid account credentials." });
-        SetSessionCookie(result.SessionToken, result.SessionExpiresAtUtc, request.RememberMe);
-        return Ok(ToSessionContract(result.Account));
+        if (result.Authentication is null)
+            return Ok(new PublicAccountSessionContract { Authenticated = false, EmailConfirmationRequired = true });
+        SetSessionCookie(result.Authentication.SessionToken, result.Authentication.SessionExpiresAtUtc, request.RememberMe);
+        var session = ToSessionContract(result.Account);
+        if (!result.Account.EmailConfirmed && request.Site is "workshop" or "public-site")
+            session = session with
+            {
+                ConfirmationEmailStatus = mailQueue.TryEnqueue(new(result.Account.Email, request.Site,
+                    PublicAccountMailPurpose.EmailConfirmation, Automatic: true)) ? "requested" : "unavailable"
+            };
+        return Ok(session);
     }
 
     [HttpGet("account/session")]
@@ -141,6 +161,8 @@ public sealed class PublicAccountController(
             Username = account.Username,
             Email = account.Email,
             DisplayName = account.DisplayName,
+            EmailConfirmed = account.EmailConfirmed,
+            EmailConfirmationRequired = account.EmailConfirmationRequired,
             WorkshopCapabilityGuideSeenVersion = account.WorkshopCapabilityGuideSeenVersion
         }};
 }
@@ -192,6 +214,8 @@ public sealed class PublicProfileController(IPublicAccountService accountService
             Username = account.Username,
             Email = account.Email,
             DisplayName = account.DisplayName,
+            EmailConfirmed = account.EmailConfirmed,
+            EmailConfirmationRequired = account.EmailConfirmationRequired,
             WorkshopCapabilityGuideSeenVersion = account.WorkshopCapabilityGuideSeenVersion
         };
 }

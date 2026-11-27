@@ -54,6 +54,20 @@ cache helper, including when compensation cannot remove the persisted append.
 
 ServerAPI public accounts are a separate Domain-owned boundary backed by `PublicAccount` and `PublicAccountSession` collections. The dedicated cookie scheme revalidates the hashed session token and account security version on each authenticated request. Controllers expose only Contracts DTOs; registration, login, profile mutation, and logout require CSRF validation, while existing anonymous content and push routes remain unchanged.
 
+ServerAPI registration now creates a pending account without a session; new
+accounts require email confirmation before login or session validation. Legacy
+accounts retain access and receive confirmation prompts. Domain owns separate
+hashed reset/confirmation tokens and atomic Mongo/mock issuance and consumption.
+Password reset increments the security version; normalized email changes clear
+both token purposes and the confirmation binding.
+
+ServerAPI owns a bounded, best-effort account-mail worker and configured SMTP/mock
+adapter. Four anonymous, CSRF-protected account-mail POST endpoints have no-store
+responses and mandatory independent rate limits. Closed site identifiers select
+fixed trusted origins; no caller-supplied redirect URL is accepted. Freezer's
+separate registration/session path is preserved. See [ADR-031](adr/ADR-031-public-account-mail-confirmation.md)
+and the [delivery record](../feature-handoffs/workshop-password-recovery-handoff.md).
+
 ## Shooter Workshop boundary
 
 The Workshop is an additive ServerAPI/Domain feature under `/api/v1/workshop`. It

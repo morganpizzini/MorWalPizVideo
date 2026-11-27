@@ -1,4 +1,4 @@
-const accountAuthenticationPaths = ['/account/login', '/account/register'];
+const accountAuthenticationPaths = ['/account/login', '/account/register', '/account/forgot-password', '/account/reset-password', '/account/check-email', '/account/confirm-email'];
 const localOrigin = 'https://morwalpiz.invalid';
 
 export function getSafeReturnUrl(search: string): string | undefined {

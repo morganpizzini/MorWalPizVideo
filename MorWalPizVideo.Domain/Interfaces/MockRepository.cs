@@ -747,21 +747,84 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         public Task UpdateAccountAsync(PublicAccount account, CancellationToken cancellationToken = default) =>
             UpdateItemAsync(account);
 
-        public async Task UpdateProfileAsync(
+        public Task UpdateProfileAsync(
             string accountId,
             string email,
             string normalizedEmail,
             string displayName,
             CancellationToken cancellationToken = default)
         {
-            var account = await GetAccountAsync(accountId, cancellationToken);
-            if (account is not null)
-                await UpdateItemAsync(account with
+            lock (scenario)
+            {
+                var account = scenario.Read<PublicAccount>(DbCollections.PublicAccounts).FirstOrDefault(item => item.Id == accountId);
+                if (account is not null)
                 {
-                    Email = email,
-                    NormalizedEmail = normalizedEmail,
-                    DisplayName = displayName
-                });
+                    var changed = account.NormalizedEmail != normalizedEmail;
+                    scenario.Replace(DbCollections.PublicAccounts, account with
+                    {
+                        Email = email, NormalizedEmail = normalizedEmail, DisplayName = displayName,
+                        EmailConfirmedAtUtc = changed ? null : account.EmailConfirmedAtUtc,
+                        ConfirmedEmail = changed ? null : account.ConfirmedEmail,
+                        ConfirmationTokenHash = changed ? null : account.ConfirmationTokenHash,
+                        ConfirmationExpiresAtUtc = changed ? null : account.ConfirmationExpiresAtUtc,
+                        ResetTokenHash = changed ? null : account.ResetTokenHash,
+                        ResetExpiresAtUtc = changed ? null : account.ResetExpiresAtUtc,
+                        ResetSecurityVersion = changed ? null : account.ResetSecurityVersion
+                    });
+                }
+            }
+            return Task.CompletedTask;
+        }
+
+        public Task<bool> IssueMailTokenAsync(string accountId, string normalizedEmail, int securityVersion,
+            PublicAccountMailPurpose purpose, string tokenHash, DateTime expiresAtUtc, DateTime now, bool onlyIfExpired,
+            CancellationToken cancellationToken = default)
+        {
+            lock (scenario)
+            {
+                var account = scenario.Read<PublicAccount>(DbCollections.PublicAccounts).FirstOrDefault(item =>
+                    item.Id == accountId && item.IsActive && item.NormalizedEmail == normalizedEmail && item.SecurityVersion == securityVersion);
+                if (account is null || (onlyIfExpired && account.ConfirmationTokenHash is not null && account.ConfirmationExpiresAtUtc > now))
+                    return Task.FromResult(false);
+                scenario.Replace(DbCollections.PublicAccounts, purpose == PublicAccountMailPurpose.PasswordReset
+                    ? account with { ResetTokenHash = tokenHash, ResetExpiresAtUtc = expiresAtUtc, ResetSecurityVersion = securityVersion }
+                    : account with { ConfirmationTokenHash = tokenHash, ConfirmationExpiresAtUtc = expiresAtUtc });
+                return Task.FromResult(true);
+            }
+        }
+
+        public Task<bool> ConsumeMailTokenAsync(string accountId, string normalizedEmail, int securityVersion,
+            PublicAccountMailPurpose purpose, string tokenHash, DateTime now, string? passwordHash, string? salt,
+            CancellationToken cancellationToken = default)
+        {
+            lock (scenario)
+            {
+                var account = scenario.Read<PublicAccount>(DbCollections.PublicAccounts).FirstOrDefault(item =>
+                    item.Id == accountId && item.IsActive && item.NormalizedEmail == normalizedEmail && item.SecurityVersion == securityVersion);
+                if (account is null) return Task.FromResult(false);
+                if (purpose == PublicAccountMailPurpose.PasswordReset)
+                {
+                    if (passwordHash is null || salt is null) throw new ArgumentException("A reset requires a password hash and salt.");
+                    if (account.ResetTokenHash != tokenHash || account.ResetExpiresAtUtc is null ||
+                        account.ResetExpiresAtUtc <= now || account.ResetSecurityVersion != securityVersion) return Task.FromResult(false);
+                    scenario.Replace(DbCollections.PublicAccounts, account with
+                    {
+                        PasswordHash = passwordHash, Salt = salt, SecurityVersion = securityVersion + 1,
+                        ResetTokenHash = null, ResetExpiresAtUtc = null, ResetSecurityVersion = null
+                    });
+                }
+                else
+                {
+                    if (account.ConfirmationTokenHash != tokenHash || account.ConfirmationExpiresAtUtc is null ||
+                        account.ConfirmationExpiresAtUtc <= now) return Task.FromResult(false);
+                    scenario.Replace(DbCollections.PublicAccounts, account with
+                    {
+                        EmailConfirmedAtUtc = now, ConfirmedEmail = normalizedEmail,
+                        ConfirmationTokenHash = null, ConfirmationExpiresAtUtc = null
+                    });
+                }
+                return Task.FromResult(true);
+            }
         }
 
         public async Task<int> AdvanceWorkshopCapabilityGuideSeenVersionAsync(

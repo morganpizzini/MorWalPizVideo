@@ -66,8 +66,12 @@ export function Login() {
     setFieldErrors({});
     setPending(true);
     try {
-      await loginPublicAccount({ identifier, password });
-      if (!(await refresh())) {
+      const result = await loginPublicAccount({ identifier, password, site: 'public-site' });
+      if (result.emailConfirmationRequired && !result.authenticated) {
+        void navigate('/account/check-email', { state: { email: identifier.includes('@') ? identifier : '' } });
+        return;
+      }
+      if (!(await refresh(result.confirmationEmailStatus))) {
         throw new Error('La sessione autenticata non è stata verificata.');
       }
       void navigate(getPostLoginDestination(location.search), { replace: true });
@@ -122,6 +126,7 @@ export function Login() {
         aria-describedby="login-password-errors"
       />
       <FieldErrors id="login-password-errors" errors={fieldError(fieldErrors, 'Password')} />
+      <p className="mt-3"><Link to="/account/forgot-password">Password dimenticata?</Link></p>
       <p className="mt-3 mb-0">
         Non hai un account? <Link to={getAccountRegisterPath(returnUrl)}>Registrati</Link>
       </p>
@@ -131,10 +136,8 @@ export function Login() {
 
 export function Register() {
   const navigate = useNavigate();
-  const location = useLocation();
-  const { refresh } = usePublicAccount();
-  const returnUrl = getSafeReturnUrl(location.search);
   const [form, setForm] = useState({
+    site: 'public-site' as const,
     username: '',
     email: '',
     password: '',
@@ -152,11 +155,11 @@ export function Register() {
     setFieldErrors({});
     setPending(true);
     try {
-      await registerPublicAccount(form);
-      const sessionRestored = await refresh();
-      void navigate(getAccountLoginPath(returnUrl), {
+      const result = await registerPublicAccount(form);
+      setForm((current) => ({ ...current, password: '' }));
+      void navigate('/account/check-email', {
         replace: true,
-        state: { registrationSuccess: true, sessionRestoreFailed: !sessionRestored },
+        state: { email: form.email, confirmationEmailStatus: result.confirmationEmailStatus },
       });
     } catch (requestError) {
       const nextFieldErrors = getApiFieldErrors(requestError);
@@ -266,6 +269,7 @@ export function Register() {
 }
 
 export function Profile() {
+  const navigate = useNavigate();
   const { session, loading, sessionError, logout, refresh } = usePublicAccount();
   const [profile, setProfile] = useState<PublicAccountSummary | null>(session.account ?? null);
   const [displayName, setDisplayName] = useState(session.account?.displayName ?? '');
@@ -314,6 +318,10 @@ export function Profile() {
     try {
       const updated = await updatePublicProfile({ displayName, email });
       setProfile(updated);
+      if (updated.emailConfirmationRequired && !updated.emailConfirmed) {
+        void navigate('/account/check-email', { state: { email: updated.email } });
+        return;
+      }
       await refresh();
       setMessage('Profilo aggiornato.');
     } catch (requestError) {
@@ -363,6 +371,7 @@ export function Profile() {
         aria-describedby="profile-email-errors"
       />
       <FieldErrors id="profile-email-errors" errors={fieldError(fieldErrors, 'Email')} />
+      {profile.emailConfirmationRequired && <p>Se cambi email, dovrai confermare il nuovo indirizzo prima di accedere nuovamente.</p>}
       <button
         type="button"
         className="btn btn-outline-secondary me-2 mt-4"

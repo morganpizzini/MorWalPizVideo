@@ -32,6 +32,33 @@ public sealed record PublicAccount : BaseEntity
     [BsonElement("securityVersion")]
     public int SecurityVersion { get; init; }
 
+    [BsonElement("emailConfirmationRequired")]
+    public bool EmailConfirmationRequired { get; init; }
+
+    [BsonElement("emailConfirmedAtUtc")]
+    public DateTime? EmailConfirmedAtUtc { get; init; }
+
+    [BsonElement("confirmedEmail")]
+    public string? ConfirmedEmail { get; init; }
+
+    [BsonIgnore]
+    public bool EmailConfirmed => EmailConfirmedAtUtc is not null && ConfirmedEmail == NormalizedEmail;
+
+    [BsonElement("confirmationTokenHash")]
+    public string? ConfirmationTokenHash { get; init; }
+
+    [BsonElement("confirmationExpiresAtUtc")]
+    public DateTime? ConfirmationExpiresAtUtc { get; init; }
+
+    [BsonElement("resetTokenHash")]
+    public string? ResetTokenHash { get; init; }
+
+    [BsonElement("resetExpiresAtUtc")]
+    public DateTime? ResetExpiresAtUtc { get; init; }
+
+    [BsonElement("resetSecurityVersion")]
+    public int? ResetSecurityVersion { get; init; }
+
     [BsonElement("termsVersionAccepted")]
     public string TermsVersionAccepted { get; init; } = string.Empty;
 
@@ -47,6 +74,8 @@ public sealed record PublicAccount : BaseEntity
     [BsonElement("workshopCapabilityGuideSeenVersion")]
     public int WorkshopCapabilityGuideSeenVersion { get; init; } = 1;
 }
+
+public enum PublicAccountMailPurpose { PasswordReset, EmailConfirmation }
 
 public sealed record PublicAccountSession : BaseEntity
 {

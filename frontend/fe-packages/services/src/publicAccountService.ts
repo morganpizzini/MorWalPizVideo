@@ -5,6 +5,9 @@ import type {
   PublicAccountRegistrationRequest,
   PublicAccountSession,
   PublicAccountSummary,
+  PublicAccountMailRequest,
+  PublicAccountTokenRequest,
+  PublicAccountPasswordResetRequest,
 } from "@morwalpizvideo/models";
 import frontendEndpoints from "./endpoints-frontend";
 import {
@@ -121,3 +124,26 @@ export const updatePublicProfile = async (
 
 export const logoutPublicAccount = (): Promise<unknown> =>
   accountApiService.Delete(frontendEndpoints.PUBLIC_ACCOUNT_LOGOUT);
+
+async function submitAccountMail(endpoint: string, request: PublicAccountMailRequest | PublicAccountTokenRequest): Promise<void> {
+  const csrfToken = await getCsrfToken();
+  requireSuccessfulResponse(await accountApiService.post(endpoint, request, "", { "X-CSRF-TOKEN": csrfToken }));
+}
+
+export const requestPublicPasswordReset = (request: PublicAccountMailRequest): Promise<void> =>
+  submitAccountMail(frontendEndpoints.PUBLIC_ACCOUNT_RESET_REQUEST, request);
+export const resetPublicPassword = (request: PublicAccountPasswordResetRequest): Promise<void> =>
+  submitAccountMail(frontendEndpoints.PUBLIC_ACCOUNT_RESET, request);
+export const requestPublicEmailConfirmation = (request: PublicAccountMailRequest): Promise<void> =>
+  submitAccountMail(frontendEndpoints.PUBLIC_ACCOUNT_CONFIRM_REQUEST, request);
+export const confirmPublicEmail = (request: PublicAccountTokenRequest): Promise<void> =>
+  submitAccountMail(frontendEndpoints.PUBLIC_ACCOUNT_CONFIRM, request);
+
+export function getPublicAccountMailErrorMessage(error: unknown): string {
+  if (error instanceof ApiResponseError) {
+    if (error.status === 400) return "The request or link is invalid or expired. Check the details or request a new email.";
+    if (error.status === 403) return "The security request expired. Reload the page and try again.";
+    if (error.status === 429) return "Too many requests. Wait a few minutes and try again.";
+  }
+  return "Account mail is unavailable. Check your connection and try again.";
+}

@@ -1,5 +1,11 @@
 // Main barrel export file for @morwalpizvideo/models
 export type {
+  PublicAccountSite,
+  PublicAccountMailRequest,
+  PublicAccountTokenRequest,
+  PublicAccountPasswordResetRequest,
+} from "./publicAccount";
+export type {
   QuickActionEntry,
   QuickActionDefinition,
   ResolvedQuickAction,

@@ -56,6 +56,10 @@ app.use(express.static(distDir, { index: false }));
 
 // SSR for all HTML requests
 app.get('*', async (req, res) => {
+    if (['/account/reset-password', '/account/confirm-email'].includes(req.path)) {
+        return res.set('Cache-Control', 'no-store').set('Referrer-Policy', 'no-referrer')
+            .set('Content-Type', 'text/html').end(template);
+    }
     try {
         const proto = req.headers['x-forwarded-proto'] ?? req.protocol ?? 'https';
         const host = req.headers['x-forwarded-host'] ?? req.headers.host ?? 'localhost';

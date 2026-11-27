@@ -27,10 +27,13 @@ public sealed record PublicAccountLoginCommand(
 public sealed record PublicAccountProfileUpdateCommand(string DisplayName, string Email);
 
 public sealed record PublicAccountSessionResult(PublicAccount Account, string TokenHash);
+public sealed record PublicAccountLoginResult(PublicAccount Account, PublicAccountAuthenticationResult? Authentication);
 
 public interface IPublicAccountService
 {
     Task<PublicAccountAuthenticationResult?> RegisterAsync(PublicAccountRegistrationCommand request, CancellationToken cancellationToken = default);
+    Task<PublicAccount?> RegisterPendingAsync(PublicAccountRegistrationCommand request, CancellationToken cancellationToken = default);
+    Task<PublicAccountLoginResult?> LoginForPublicClientAsync(PublicAccountLoginCommand request, CancellationToken cancellationToken = default);
     Task<PublicAccountAuthenticationResult?> LoginAsync(PublicAccountLoginCommand request, CancellationToken cancellationToken = default);
     Task<PublicAccountSessionResult?> ValidateSessionAsync(string sessionToken, CancellationToken cancellationToken = default);
     Task RevokeSessionAsync(string sessionToken, CancellationToken cancellationToken = default);
@@ -49,6 +52,16 @@ public sealed class PublicAccountService(IPublicAccountRepository repository) : 
     public async Task<PublicAccountAuthenticationResult?> RegisterAsync(
         PublicAccountRegistrationCommand request,
         CancellationToken cancellationToken = default)
+    {
+        var account = await CreateAccountAsync(request, false, cancellationToken);
+        return account is null ? null : await CreateSessionAsync(account, false, cancellationToken);
+    }
+
+    public Task<PublicAccount?> RegisterPendingAsync(PublicAccountRegistrationCommand request, CancellationToken cancellationToken = default) =>
+        CreateAccountAsync(request, true, cancellationToken);
+
+    private async Task<PublicAccount?> CreateAccountAsync(
+        PublicAccountRegistrationCommand request, bool requireConfirmation, CancellationToken cancellationToken)
     {
         var username = NormalizeUsername(request.Username);
         var email = NormalizeEmail(request.Email);
@@ -76,15 +89,20 @@ public sealed class PublicAccountService(IPublicAccountRepository repository) : 
             TermsAcceptedAtUtc = DateTime.UtcNow,
             PrivacyNoticeVersionAcknowledged = PrivacyNoticeVersion,
             PrivacyNoticeAcknowledgedAtUtc = DateTime.UtcNow,
+            EmailConfirmationRequired = requireConfirmation,
             WorkshopCapabilityGuideSeenVersion = 0
         };
         await repository.AddAccountAsync(account, cancellationToken);
-        return await CreateSessionAsync(account, false, cancellationToken);
+        return account;
     }
 
     public async Task<PublicAccountAuthenticationResult?> LoginAsync(
         PublicAccountLoginCommand request,
         CancellationToken cancellationToken = default)
+        => (await LoginForPublicClientAsync(request, cancellationToken))?.Authentication;
+
+    public async Task<PublicAccountLoginResult?> LoginForPublicClientAsync(
+        PublicAccountLoginCommand request, CancellationToken cancellationToken = default)
     {
         var identifier = request.Identifier.Trim();
         var normalized = identifier.Contains('@', StringComparison.Ordinal)
@@ -100,7 +118,10 @@ public sealed class PublicAccountService(IPublicAccountRepository repository) : 
             !PasswordHashing.VerifyPassword(request.Password, account.PasswordHash, account.Salt))
             return null;
 
-        return await CreateSessionAsync(account, request.RememberMe, cancellationToken);
+        return new PublicAccountLoginResult(account,
+            account.EmailConfirmationRequired && !account.EmailConfirmed
+                ? null
+                : await CreateSessionAsync(account, request.RememberMe, cancellationToken));
     }
 
     public async Task<PublicAccountSessionResult?> ValidateSessionAsync(
@@ -117,7 +138,8 @@ public sealed class PublicAccountService(IPublicAccountRepository repository) : 
             return null;
 
         var account = await GetAccountAsync(session.AccountId, cancellationToken);
-        return account is { IsActive: true } activeAccount && activeAccount.SecurityVersion == session.SecurityVersion
+        return account is { IsActive: true } activeAccount && activeAccount.SecurityVersion == session.SecurityVersion &&
+            (!activeAccount.EmailConfirmationRequired || activeAccount.EmailConfirmed)
             ? new PublicAccountSessionResult(activeAccount, tokenHash)
             : null;
     }

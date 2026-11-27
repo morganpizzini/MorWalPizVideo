@@ -1,3 +1,4 @@
+import "@morwalpizvideo/services/account-mail-link";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { AppearanceProvider, initializeAppearance } from "@morwalpiz/layout";

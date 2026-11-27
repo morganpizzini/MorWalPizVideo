@@ -38,6 +38,14 @@ Applications must not introduce direct `fetch` or Axios clients when this packag
 
 Owns reusable visual components used by more than one application. App-specific business workflows and routes remain local.
 
+Public account recovery and email confirmation use shared `AccountMailPage`,
+`AccountEmailNotice`, and deadline-based 60-second resend presentation. Models
+own the typed contracts; services own account-CSRF transport and the dedicated
+`account-mail-link` entry point. Each app imports that entry point first to capture
+and remove sensitive fragments before routing/integrations, and owns its routes,
+localization, and the closed `workshop` or `public-site` identifier. Layout does
+not depend on services or application routing. See [ADR-031](adr/ADR-031-public-account-mail-confirmation.md).
+
 The opt-in `@morwalpiz/layout/notifications` entry point exports the shared
 toast provider, hook, and types. It uses React Bootstrap, so consumers must
 provide compatible Bootstrap styles and mount the provider inside any required
@@ -118,7 +126,7 @@ not import app-local public-client source.
 Workshop API calls use the existing public-account transport: HttpOnly cookie
 credentials and the account CSRF contract, without BackOffice bearer, API-key, or
 channel context. All domain routes are protected by restored public-account session
-state; login, registration, legal, and session bootstrap are the anonymous exceptions.
+state; login, registration, account-mail pages, legal, and session bootstrap are the anonymous exceptions.
 The application owns its route loaders/actions, reconciliation indicators, and domain
 workflows locally. It does not add Workshop product behavior to the BackOffice SPA.
 

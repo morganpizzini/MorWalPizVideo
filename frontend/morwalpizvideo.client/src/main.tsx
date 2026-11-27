@@ -1,3 +1,4 @@
+import '@morwalpizvideo/services/account-mail-link';
 import { StrictMode } from 'react';
 import { createRoot, hydrateRoot } from 'react-dom/client';
 import { AppearanceProvider, initializeAppearance } from '@morwalpiz/layout';
@@ -14,6 +15,7 @@ import { GoogleReCaptchaProvider } from 'react-google-recaptcha-v3';
 import { registerSW } from 'virtual:pwa-register';
 
 const router = createBrowserRouter(routes);
+const accountMailSurface = ['/account/reset-password', '/account/confirm-email'].includes(window.location.pathname);
 initializeAppearance();
 
 // Configurazione del registro SW con callback
@@ -35,11 +37,11 @@ const app = (
   <StrictMode>
     <AppearanceProvider>
       <HelmetProvider>
-        <GoogleReCaptchaProvider reCaptchaKey={import.meta.env.VITE_SITE_KEY}>
+        {accountMailSurface ? <RouterProvider router={router} /> : <GoogleReCaptchaProvider reCaptchaKey={import.meta.env.VITE_SITE_KEY}>
           <RouterProvider router={router} />
-        </GoogleReCaptchaProvider>
+        </GoogleReCaptchaProvider>}
       </HelmetProvider>
-      <BuyMeWidget />
+      {!accountMailSurface && <BuyMeWidget />}
       <ConsentBanner />
     </AppearanceProvider>
   </StrictMode>
@@ -48,7 +50,7 @@ const app = (
 const rootElement = document.getElementById('root')!;
 const hasSSRContent = rootElement.innerHTML.trim().length > 0;
 
-if (hasSSRContent) {
+if (hasSSRContent && !accountMailSurface) {
   hydrateRoot(rootElement, app);
 } else {
   createRoot(rootElement).render(app);

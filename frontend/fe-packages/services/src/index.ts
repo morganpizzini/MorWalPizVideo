@@ -50,6 +50,11 @@ export {
   getPublicProfile,
   updatePublicProfile,
   logoutPublicAccount,
+  requestPublicPasswordReset,
+  resetPublicPassword,
+  requestPublicEmailConfirmation,
+  confirmPublicEmail,
+  getPublicAccountMailErrorMessage,
 } from "./publicAccountService";
 export {
   submitFeedback,

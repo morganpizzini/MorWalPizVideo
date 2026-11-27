@@ -1115,13 +1115,72 @@ namespace MorWalPizVideo.Server.Services.Interfaces
             string normalizedEmail,
             string displayName,
             CancellationToken cancellationToken = default) =>
-            _collection.UpdateOneAsync(
-                item => item.Id == accountId,
-                Builders<PublicAccount>.Update
-                    .Set(item => item.Email, email)
-                    .Set(item => item.NormalizedEmail, normalizedEmail)
-                    .Set(item => item.DisplayName, displayName),
+            UpdateProfileCoreAsync(accountId, email, normalizedEmail, displayName, cancellationToken);
+
+        private Task UpdateProfileCoreAsync(string accountId, string email, string normalizedEmail, string displayName, CancellationToken cancellationToken)
+        {
+            var fields = new BsonDocument
+            {
+                ["email"] = new BsonDocument("$literal", email),
+                ["normalizedEmail"] = new BsonDocument("$literal", normalizedEmail),
+                ["displayName"] = new BsonDocument("$literal", displayName)
+            };
+            foreach (var field in new[] { "emailConfirmedAtUtc", "confirmedEmail", "confirmationTokenHash", "confirmationExpiresAtUtc", "resetTokenHash", "resetExpiresAtUtc", "resetSecurityVersion" })
+                fields[field] = new BsonDocument("$cond", new BsonArray
+                {
+                    new BsonDocument("$eq", new BsonArray { "$normalizedEmail", new BsonDocument("$literal", normalizedEmail) }),
+                    $"${field}", BsonNull.Value
+                });
+            return _collection.UpdateOneAsync(item => item.Id == accountId,
+                new PipelineUpdateDefinition<PublicAccount>(new[] { new BsonDocument("$set", fields) }),
                 cancellationToken: cancellationToken);
+        }
+
+        public async Task<bool> IssueMailTokenAsync(string accountId, string normalizedEmail, int securityVersion,
+            PublicAccountMailPurpose purpose, string tokenHash, DateTime expiresAtUtc, DateTime now, bool onlyIfExpired,
+            CancellationToken cancellationToken = default)
+        {
+            var filter = Builders<PublicAccount>.Filter.Where(item => item.Id == accountId &&
+                item.IsActive && item.NormalizedEmail == normalizedEmail && item.SecurityVersion == securityVersion);
+            var update = purpose == PublicAccountMailPurpose.PasswordReset
+                ? Builders<PublicAccount>.Update.Set(item => item.ResetTokenHash, tokenHash)
+                    .Set(item => item.ResetExpiresAtUtc, expiresAtUtc).Set(item => item.ResetSecurityVersion, securityVersion)
+                : Builders<PublicAccount>.Update.Set(item => item.ConfirmationTokenHash, tokenHash)
+                    .Set(item => item.ConfirmationExpiresAtUtc, expiresAtUtc);
+            if (onlyIfExpired)
+                filter &= Builders<PublicAccount>.Filter.Eq(item => item.ConfirmationTokenHash, null) |
+                          Builders<PublicAccount>.Filter.Lte(item => item.ConfirmationExpiresAtUtc, now);
+            var result = await _collection.UpdateOneAsync(filter, update, cancellationToken: cancellationToken);
+            return result.ModifiedCount == 1;
+        }
+
+        public async Task<bool> ConsumeMailTokenAsync(string accountId, string normalizedEmail, int securityVersion,
+            PublicAccountMailPurpose purpose, string tokenHash, DateTime now, string? passwordHash, string? salt,
+            CancellationToken cancellationToken = default)
+        {
+            var filter = Builders<PublicAccount>.Filter.Where(item => item.Id == accountId &&
+                item.IsActive && item.NormalizedEmail == normalizedEmail && item.SecurityVersion == securityVersion);
+            UpdateDefinition<PublicAccount> update;
+            if (purpose == PublicAccountMailPurpose.PasswordReset)
+            {
+                if (passwordHash is null || salt is null) throw new ArgumentException("A reset requires a password hash and salt.");
+                filter &= Builders<PublicAccount>.Filter.Where(item => item.ResetTokenHash == tokenHash &&
+                    item.ResetExpiresAtUtc > now && item.ResetSecurityVersion == securityVersion);
+                update = Builders<PublicAccount>.Update.Set(item => item.PasswordHash, passwordHash)
+                    .Set(item => item.Salt, salt).Inc(item => item.SecurityVersion, 1)
+                    .Unset(item => item.ResetTokenHash).Unset(item => item.ResetExpiresAtUtc).Unset(item => item.ResetSecurityVersion);
+            }
+            else
+            {
+                filter &= Builders<PublicAccount>.Filter.Where(item => item.ConfirmationTokenHash == tokenHash &&
+                    item.ConfirmationExpiresAtUtc > now);
+                update = Builders<PublicAccount>.Update.Set(item => item.EmailConfirmedAtUtc, now)
+                    .Set(item => item.ConfirmedEmail, normalizedEmail)
+                    .Unset(item => item.ConfirmationTokenHash).Unset(item => item.ConfirmationExpiresAtUtc);
+            }
+            var result = await _collection.UpdateOneAsync(filter, update, cancellationToken: cancellationToken);
+            return result.ModifiedCount == 1;
+        }
 
         public async Task<int> AdvanceWorkshopCapabilityGuideSeenVersionAsync(
             string accountId,

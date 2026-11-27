@@ -58,6 +58,7 @@ Excluded:
 27. [Shooter Workshop functional baseline](shooter-workshop.md)
 28. [Non-blocking shared Mongo index startup](adr/ADR-029-nonblocking-mongo-index-startup.md)
 29. [Shooter Workshop recipe journal](adr/ADR-030-shooter-workshop-recipe-journal.md)
+30. [Shared public-account recovery and confirmation](adr/ADR-031-public-account-mail-confirmation.md)
 
 ## Architectural Baseline
 

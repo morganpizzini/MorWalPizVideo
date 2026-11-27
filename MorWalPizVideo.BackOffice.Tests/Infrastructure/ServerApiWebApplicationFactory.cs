@@ -68,7 +68,9 @@ public sealed class ServerApiWebApplicationFactory : WebApplicationFactory<MorWa
                 ["FeatureManagement:EnableCors"] = "false",
                 ["PublicAccount:RegistrationRateLimit:PermitLimit"] = "1000",
                 ["PublicAccount:LoginRateLimit:PermitLimit"] = "1000",
-                ["YouTubeChannelId"] = PrimaryScenario.ChannelId
+                ["YouTubeChannelId"] = PrimaryScenario.ChannelId,
+                ["PublicAccount:Mail:WorkshopOrigin"] = "https://workshop.morwalpiz.com",
+                ["PublicAccount:Mail:PublicSiteOrigin"] = "https://morwalpiz.com"
             });
         });
 

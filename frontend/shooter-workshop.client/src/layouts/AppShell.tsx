@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { NavLink, Outlet, useFetcher, useLocation, useNavigate } from "react-router";
-import { markWorkshopCapabilityGuideSeen } from "@morwalpizvideo/services";
+import { markWorkshopCapabilityGuideSeen, requestPublicEmailConfirmation, getPublicAccountMailErrorMessage } from "@morwalpizvideo/services";
 import { useToast } from "@morwalpiz/layout/notifications";
 import { useWorkshopAuth } from "../auth/AuthProvider";
 import { LoadingState } from "../components/States";
@@ -9,7 +9,7 @@ import { LanguageSelector } from "../components/LanguageSelector";
 import InstallPrompt from "../components/InstallPrompt";
 import { useI18n } from "../i18n";
 import { useInstallPrompt } from "../services/installPrompt";
-import { AppearanceSelector } from "@morwalpiz/layout";
+import { AppearanceSelector, AccountEmailNotice } from "@morwalpiz/layout";
 import { getOfflineState, hasOfflineData, subscribeToOfflineChanges } from "../services/offlineStore";
 import type { action as offlineAction } from "../routes/offlineAction";
 
@@ -252,6 +252,11 @@ export default function AppShell() {
         </div>
       </header>
       <main className="workshop-main" data-feedback-app-content>
+        {session.account && !session.account.emailConfirmed && <AccountEmailNotice key={session.account.id} t={t}
+          disabled={effectivelyOffline} initiallyRequested={session.confirmationEmailStatus === "requested"}
+          errorMessage={(requestError) => t(getPublicAccountMailErrorMessage(requestError))}
+          onRequest={() => requestPublicEmailConfirmation({ email: session.account!.email, site: "workshop" })}
+          onRefresh={async () => { if (!(await refresh())) throw new Error("Unable to verify the session."); }} />}
         <InstallPrompt />
         {(offlineState.blocked > 0 || showSyncError || showSyncAuthError || logoutError) && (
           <div className="offline-shell-alerts">

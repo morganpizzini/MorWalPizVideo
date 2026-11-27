@@ -50,6 +50,10 @@ const PUBLIC_ACCOUNT_SESSION = "api/v1/account/session";
 const PUBLIC_ACCOUNT_LOGOUT = "api/v1/account/sessions/current";
 const PUBLIC_ACCOUNT_CSRF = "api/v1/account/csrf";
 const PUBLIC_ACCOUNT_PROFILE = "api/v1/profile";
+const PUBLIC_ACCOUNT_RESET_REQUEST = "api/v1/account/password-recovery-requests";
+const PUBLIC_ACCOUNT_RESET = "api/v1/account/password-resets";
+const PUBLIC_ACCOUNT_CONFIRM_REQUEST = "api/v1/account/email-confirmation-requests";
+const PUBLIC_ACCOUNT_CONFIRM = "api/v1/account/email-confirmations";
 const PUBLIC_FEEDBACK = "api/v1/feedback";
 const PUBLIC_BLOG_INTERACTIONS = `${baseEndpoint}/blog/{slug}/interactions`;
 
@@ -108,6 +112,10 @@ const APIKEYS_TOGGLE = `${APIKEYS}/{id}/toggle`;
 const APIKEYS_REGENERATE = `${APIKEYS}/{id}/regenerate`;
 
 export default {
+  PUBLIC_ACCOUNT_RESET_REQUEST,
+  PUBLIC_ACCOUNT_RESET,
+  PUBLIC_ACCOUNT_CONFIRM_REQUEST,
+  PUBLIC_ACCOUNT_CONFIRM,
   CALENDAREVENTS,
   MATCHES,
   MATCHES_DETAIL,

@@ -19,4 +19,10 @@ server {
     location / {
         try_files $uri $uri/ /index.html;
     }
+
+    location ~ ^/account/(reset-password|confirm-email)$ {
+        add_header Cache-Control "no-store" always;
+        add_header Referrer-Policy "no-referrer" always;
+        try_files /index.html =404;
+    }
 }

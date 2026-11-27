@@ -93,6 +93,25 @@ ServerAPI public accounts are separate from BackOffice `User`/RBAC and the on-ho
 
 The browser session uses an HttpOnly, Secure, `SameSite=None` cookie carrying a cookie-safe 256-bit opaque token. ServerAPI stores only the session-token hash and revalidates current session/account state. The public-account session collection has a TTL index on expiry and a lookup index on `tokenHash`; authorization checks expiry independently of TTL cleanup. Unsafe account requests require the matching CSRF header/cookie pair. Credentialed CORS is restricted to the two canonical MorWalPiz origins and applies only to account endpoints; ordinary public APIs and anonymous Web Push retain `credentials: omit`.
 
+New ServerAPI registrations have no session and must confirm email before login.
+Legacy records missing the additive gate retain access but are not treated as
+verified. Confirmation is bound to the current normalized email. Password reset
+uses a separate 256-bit token, expires after 30 minutes, and atomically increments
+the account security version; confirmation expires after 24 hours. Only token
+hashes are persisted, last issuance wins, and email changes invalidate both
+purposes. Recovery does not erase previously prepared offline device data.
+
+The four anonymous account-mail endpoints retain CSRF and account-only CORS.
+Reset and confirmation requests have separate mandatory limits of ten per observed
+IP per ten minutes; redemption permits twenty per ten minutes. The optional
+login-limiter flag cannot disable these policies. Uniform queue admission avoids
+account lookup and SMTP latency in request responses; delivery is best-effort.
+SMTP failures log purpose and exception type only, not provider exception text,
+mailboxes, tokens, links, passwords, or credentials. Browser entry points capture
+mail fragments in module memory and remove them before integrations initialize;
+reset/confirmation pages are no-store/no-referrer and bypass public SSR and
+third-party widgets. See [ADR-031](adr/ADR-031-public-account-mail-confirmation.md).
+
 Production activation is blocked: `GET https://morwalpiz-serverapi.azurewebsites.net/api/v1/account/csrf` currently returns `401`, while current controller metadata and in-process endpoint tests allow it anonymously. Verify the deployed ServerAPI revision and App Service/gateway authentication before changing application authorization. Do not weaken the host fallback policy to compensate for release skew or pre-application authentication. Workshop's client image now supports a same-origin `/api` reverse-proxy mode so its account cookie is first-party; deployed proxy, CSRF, and hard-reload browser evidence remains required.
 
 ### Shooter Workshop account boundary

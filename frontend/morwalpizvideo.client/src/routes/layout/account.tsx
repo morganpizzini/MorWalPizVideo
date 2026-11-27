@@ -10,7 +10,7 @@ interface PublicAccountContextValue {
   session: PublicAccountSession;
   loading: boolean;
   sessionError: string | null;
-  refresh: () => Promise<boolean>;
+  refresh: (confirmationEmailStatus?: PublicAccountSession['confirmationEmailStatus']) => Promise<boolean>;
   logout: () => Promise<void>;
 }
 
@@ -22,10 +22,10 @@ export function PublicAccountProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [sessionError, setSessionError] = useState<string | null>(null);
 
-  const refresh = async () => {
+  const refresh = async (confirmationEmailStatus?: PublicAccountSession['confirmationEmailStatus']) => {
     try {
       const nextSession = await getPublicAccountSession();
-      setSession(nextSession);
+      setSession(confirmationEmailStatus ? { ...nextSession, confirmationEmailStatus } : nextSession);
       setSessionError(null);
       return nextSession.authenticated;
     } catch (error) {

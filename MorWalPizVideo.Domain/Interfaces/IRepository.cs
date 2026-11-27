@@ -22,6 +22,8 @@ namespace MorWalPizVideo.Server.Services.Interfaces
         Task<PublicAccount> AddAccountAsync(PublicAccount account, CancellationToken cancellationToken = default);
         Task UpdateAccountAsync(PublicAccount account, CancellationToken cancellationToken = default);
         Task UpdateProfileAsync(string accountId, string email, string normalizedEmail, string displayName, CancellationToken cancellationToken = default);
+        Task<bool> IssueMailTokenAsync(string accountId, string normalizedEmail, int securityVersion, PublicAccountMailPurpose purpose, string tokenHash, DateTime expiresAtUtc, DateTime now, bool onlyIfExpired, CancellationToken cancellationToken = default);
+        Task<bool> ConsumeMailTokenAsync(string accountId, string normalizedEmail, int securityVersion, PublicAccountMailPurpose purpose, string tokenHash, DateTime now, string? passwordHash, string? salt, CancellationToken cancellationToken = default);
         Task<int> AdvanceWorkshopCapabilityGuideSeenVersionAsync(string accountId, int version, CancellationToken cancellationToken = default);
         Task<IReadOnlyList<PublicAccount>> ListAccountsAsync(string? search, int page, int pageSize, CancellationToken cancellationToken = default);
         Task<long> CountAccountsAsync(string? search, CancellationToken cancellationToken = default);

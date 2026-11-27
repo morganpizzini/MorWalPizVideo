@@ -78,6 +78,14 @@ builder.Services.AddCors(options =>
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    foreach (var policy in new[] { "account-mail-request", "account-confirmation-request", "account-mail-redeem" })
+        options.AddPolicy(policy, context => RateLimitPartition.GetFixedWindowLimiter(
+            $"{policy}:{context.Connection.RemoteIpAddress?.ToString() ?? "unknown"}",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = policy == "account-mail-redeem" ? 20 : 10,
+                Window = TimeSpan.FromMinutes(10), QueueLimit = 0, AutoReplenishment = true
+            }));
     options.AddPolicy("newsletter-public", context => RateLimitPartition.GetFixedWindowLimiter(
         $"newsletter:{context.Connection.RemoteIpAddress?.ToString() ?? "unknown"}:{context.Request.Query["channelId"].ToString()}",
         _ => new FixedWindowRateLimiterOptions
@@ -184,6 +192,14 @@ if (enableKeyVault)
 }
 
 builder.AddServiceDefaults();
+builder.Services.Configure<AccountMailOptions>(builder.Configuration.GetSection("PublicAccount:Mail"));
+builder.Services.AddScoped<PublicAccountMailService>();
+builder.Services.AddSingleton<AccountMailMockSender>();
+builder.Services.AddSingleton<IAccountMailSender>(provider => enableMock
+    ? provider.GetRequiredService<AccountMailMockSender>()
+    : new AccountSmtpSender(provider.GetRequiredService<IOptions<AccountMailOptions>>()));
+builder.Services.AddSingleton<AccountMailQueue>();
+builder.Services.AddHostedService<AccountMailWorker>();
 
 if (enableOutputCache)
 {

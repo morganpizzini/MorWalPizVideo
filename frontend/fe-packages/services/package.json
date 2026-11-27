@@ -7,6 +7,10 @@
   "types": "dist/index.d.ts",
   "type": "module",
   "exports": {
+    "./account-mail-link": {
+      "types": "./dist/accountMailLink.d.ts",
+      "import": "./dist/accountMailLink.js"
+    },
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
