@@ -1,0 +1,11 @@
+{
+  "name": "@morwalpizvideo/skill-handoff-cleanup",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Tests for repository handoff cleanup instructions.",
+  "files": ["SKILL.md"],
+  "scripts": {
+    "test": "node --test --test-force-exit tests/*.mjs"
+  }
+}
