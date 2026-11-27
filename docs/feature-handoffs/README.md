@@ -13,6 +13,11 @@ approval. After implementation, update the handoff, merge enduring details and
 remaining gates into the owning feature record, update incoming links, and retire
 the redundant plan. Pending proposals remain pending after consolidation.
 
+Use the repository `handoff-cleanup` Copilot skill for batches of completed
+handoffs. It requires verification against current source and documentation
+before a handoff is retired, and keeps incomplete, review-only, or
+proposal-only work as intake rather than silently closing it.
+
 ## Preserved fixtures
 
 `freezer-analysis-samples/` remains in place. It contains test fixtures, not
