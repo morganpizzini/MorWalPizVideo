@@ -50,7 +50,10 @@ vi.mock("react-router", () => ({
   useNavigate: () => vi.fn(),
 }));
 
-vi.mock("@morwalpiz/layout", () => ({ AppearanceSelector: () => null }));
+vi.mock("@morwalpiz/layout", () => ({
+  AccountEmailNotice: () => null,
+  AppearanceSelector: () => null,
+}));
 vi.mock("@morwalpizvideo/services", () => ({ markWorkshopCapabilityGuideSeen: vi.fn() }));
 vi.mock("../auth/AuthProvider", () => ({ useWorkshopAuth: () => testState.auth }));
 vi.mock("../components/States", () => ({ LoadingState: () => null }));
